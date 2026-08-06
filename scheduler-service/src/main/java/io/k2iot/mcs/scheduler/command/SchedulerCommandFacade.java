@@ -444,7 +444,8 @@ public class SchedulerCommandFacade {
               "REPLACE_TRIGGER",
               "PAUSE_TRIGGER",
               "RESUME_TRIGGER",
-              "DELETE_TRIGGER" -> TriggerDefinition.class;
+              "DELETE_TRIGGER" ->
+              TriggerDefinition.class;
           case "CREATE_SCHEDULE" -> SchedulerCommands.ScheduleResult.class;
           case "FIRE_TRIGGER_NOW" -> ManualFireResult.class;
           default ->
