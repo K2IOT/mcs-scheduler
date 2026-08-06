@@ -8,12 +8,10 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Repository;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-@Repository
 public class JdbcCommandRequestRepository implements CommandRequestRepository {
 
   private final JdbcClient jdbc;
