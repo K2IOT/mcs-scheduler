@@ -1,24 +1,25 @@
 package io.k2iot.mcs.scheduler.command;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 public final class JdbcCommandRequestRepository implements CommandRequestRepository {
 
   private final JdbcClient jdbc;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
-  public JdbcCommandRequestRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
+  public JdbcCommandRequestRepository(JdbcClient jdbc, JsonMapper jsonMapper) {
     this.jdbc = jdbc;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -61,7 +62,7 @@ public final class JdbcCommandRequestRepository implements CommandRequestReposit
   }
 
   @Override
-  public void complete(UUID requestId, JsonNode responseJson, java.time.Instant processedAt) {
+  public void complete(UUID requestId, JsonNode responseJson, Instant processedAt) {
     int updated =
         jdbc.sql(
                 """
@@ -100,8 +101,8 @@ public final class JdbcCommandRequestRepository implements CommandRequestReposit
 
   private JsonNode readJson(String json) {
     try {
-      return objectMapper.readTree(json);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.readTree(json);
+    } catch (JacksonException exception) {
       throw new IllegalStateException("Stored command JSON is invalid", exception);
     }
   }
@@ -112,8 +113,8 @@ public final class JdbcCommandRequestRepository implements CommandRequestReposit
 
   private String writeJson(Object value) {
     try {
-      return objectMapper.writeValueAsString(value);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.writeValueAsString(value);
+    } catch (JacksonException exception) {
       throw new IllegalArgumentException("Command JSON cannot be serialized", exception);
     }
   }
