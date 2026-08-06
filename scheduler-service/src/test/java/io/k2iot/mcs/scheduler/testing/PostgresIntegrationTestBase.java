@@ -5,10 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
 @SpringBootTest(
     classes = SchedulerApplication.class,
     properties = {
@@ -17,12 +14,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     })
 public abstract class PostgresIntegrationTestBase {
 
-  @Container
   protected static final PostgreSQLContainer<?> POSTGRES =
       new PostgreSQLContainer<>("postgres:16-alpine")
           .withDatabaseName("scheduler")
           .withUsername("scheduler")
           .withPassword("scheduler");
+
+  static {
+    POSTGRES.start();
+  }
 
   @DynamicPropertySource
   static void registerPostgresProperties(DynamicPropertyRegistry registry) {
