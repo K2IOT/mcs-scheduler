@@ -1,8 +1,5 @@
 package io.k2iot.mcs.scheduler.job;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -11,6 +8,9 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 public final class JdbcJobRepository implements JobRepository {
@@ -19,11 +19,11 @@ public final class JdbcJobRepository implements JobRepository {
   private static final TypeReference<Map<String, String>> STRING_MAP = new TypeReference<>() {};
 
   private final JdbcClient jdbc;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
-  public JdbcJobRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
+  public JdbcJobRepository(JdbcClient jdbc, JsonMapper jsonMapper) {
     this.jdbc = jdbc;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -159,16 +159,16 @@ public final class JdbcJobRepository implements JobRepository {
 
   private String writeJson(Object value) {
     try {
-      return objectMapper.writeValueAsString(value);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.writeValueAsString(value);
+    } catch (JacksonException exception) {
       throw new IllegalArgumentException("Job JSON cannot be serialized", exception);
     }
   }
 
   private <T> T readJson(String json, TypeReference<T> type) {
     try {
-      return objectMapper.readValue(json, type);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.readValue(json, type);
+    } catch (JacksonException exception) {
       throw new IllegalStateException("Stored job JSON is invalid", exception);
     }
   }
