@@ -13,7 +13,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Repository
-public final class JdbcJobRepository implements JobRepository {
+public class JdbcJobRepository implements JobRepository {
 
   private static final TypeReference<Map<String, Object>> OBJECT_MAP = new TypeReference<>() {};
   private static final TypeReference<Map<String, String>> STRING_MAP = new TypeReference<>() {};
