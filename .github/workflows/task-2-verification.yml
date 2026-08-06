@@ -1,6 +1,9 @@
 name: Task 2 Verification
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - agent/task-2-postgresql-quartz-schemas
