@@ -1,0 +1,37 @@
+name: Task 3 Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - agent/task-3-domain-model
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  domain-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Enable Maven wrapper
+        run: chmod +x mvnw
+
+      - name: Run focused domain tests
+        run: ./mvnw -B -pl scheduler-service -am -Dtest=TriggerValidatorTest,ExecutionIdentityTest -Dsurefire.failIfNoSpecifiedTests=false test
+
+      - name: Run full Maven verification
+        run: ./mvnw -B verify
