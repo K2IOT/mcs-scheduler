@@ -12,7 +12,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Repository
-public final class JdbcDestinationRepository implements DestinationRepository {
+public class JdbcDestinationRepository implements DestinationRepository {
 
   private static final TypeReference<Map<String, String>> STRING_MAP = new TypeReference<>() {};
 
