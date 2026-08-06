@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -188,35 +187,39 @@ public final class TriggerValidator {
       ZoneId zone,
       Instant now,
       Duration interval) {
-    Instant effectiveStart = now;
-    if (trigger.startAt() != null && trigger.startAt().isAfter(effectiveStart)) {
-      effectiveStart = trigger.startAt();
+    Instant notBefore = now.plusNanos(1);
+    if (trigger.startAt() != null && trigger.startAt().isAfter(notBefore)) {
+      notBefore = trigger.startAt();
     }
 
-    ZonedDateTime from = effectiveStart.atZone(zone);
+    ZonedDateTime from = notBefore.atZone(zone);
     for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
       LocalDate date = from.toLocalDate().plusDays(dayOffset);
       if (!spec.daysOfWeek().contains(date.getDayOfWeek())) {
         continue;
       }
 
-      LocalTime candidateTime = spec.startTime();
-      if (dayOffset == 0 && !from.toLocalTime().isBefore(candidateTime)) {
-        LocalDateTime next = from.toLocalDateTime().plus(interval);
-        if (!next.toLocalDate().equals(date)) {
-          continue;
+      LocalDateTime first = LocalDateTime.of(date, spec.startTime());
+      LocalDateTime last = LocalDateTime.of(date, spec.endTime());
+      LocalDateTime threshold = from.toLocalDateTime();
+      LocalDateTime candidate = first;
+      if (candidate.isBefore(threshold)) {
+        Duration elapsed = Duration.between(first, threshold);
+        long completedIntervals = elapsed.dividedBy(interval);
+        candidate = first.plus(interval.multipliedBy(completedIntervals));
+        if (candidate.isBefore(threshold)) {
+          candidate = candidate.plus(interval);
         }
-        candidateTime = next.toLocalTime();
       }
-      if (candidateTime.isAfter(spec.endTime())) {
+      if (candidate.isAfter(last)) {
         continue;
       }
 
-      Instant candidate = ZonedDateTime.of(date, candidateTime, zone).toInstant();
-      if (!candidate.isAfter(now)) {
+      Instant candidateInstant = candidate.atZone(zone).toInstant();
+      if (!candidateInstant.isAfter(now)) {
         continue;
       }
-      if (trigger.endAt() == null || !candidate.isAfter(trigger.endAt())) {
+      if (trigger.endAt() == null || !candidateInstant.isAfter(trigger.endAt())) {
         return true;
       }
     }
