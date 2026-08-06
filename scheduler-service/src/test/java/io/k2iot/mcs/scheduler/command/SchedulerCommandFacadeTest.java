@@ -8,8 +8,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.k2iot.mcs.scheduler.destination.DestinationDefinition;
 import io.k2iot.mcs.scheduler.destination.DestinationRepository;
 import io.k2iot.mcs.scheduler.job.ConcurrencyPolicy;
@@ -29,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class SchedulerCommandFacadeTest {
@@ -45,7 +44,7 @@ class SchedulerCommandFacadeTest {
   @Mock CommandRequestRepository commandRequestRepository;
   @Mock SchedulerProjectionPort schedulerProjection;
 
-  private final ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
+  private final JsonMapper jsonMapper = JsonMapper.builder().findAndAddModules().build();
   private SchedulerCommandFacade facade;
 
   @BeforeEach
@@ -57,7 +56,7 @@ class SchedulerCommandFacadeTest {
             destinationRepository,
             commandRequestRepository,
             schedulerProjection,
-            objectMapper,
+            jsonMapper,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -106,7 +105,7 @@ class SchedulerCommandFacadeTest {
             "billing",
             JOB_ID,
             "0".repeat(64),
-            objectMapper.createObjectNode(),
+            jsonMapper.createObjectNode(),
             NOW.minusSeconds(10));
     when(commandRequestRepository.findByRequestId(REQUEST_ID)).thenReturn(Optional.of(previous));
 
