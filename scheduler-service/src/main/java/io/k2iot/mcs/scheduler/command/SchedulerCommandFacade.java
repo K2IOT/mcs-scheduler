@@ -457,10 +457,10 @@ public class SchedulerCommandFacade {
           case "CREATE_JOB", "UPDATE_JOB", "PAUSE_JOB", "RESUME_JOB", "DELETE_JOB" ->
               JobDefinition.class;
           case "CREATE_TRIGGER",
-              "REPLACE_TRIGGER",
-              "PAUSE_TRIGGER",
-              "RESUME_TRIGGER",
-              "DELETE_TRIGGER" ->
+                  "REPLACE_TRIGGER",
+                  "PAUSE_TRIGGER",
+                  "RESUME_TRIGGER",
+                  "DELETE_TRIGGER" ->
               TriggerDefinition.class;
           case "CREATE_SCHEDULE" -> SchedulerCommands.ScheduleResult.class;
           case "FIRE_TRIGGER_NOW" -> ManualFireResult.class;
