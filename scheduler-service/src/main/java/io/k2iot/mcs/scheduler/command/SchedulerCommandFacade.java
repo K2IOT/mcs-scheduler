@@ -456,8 +456,7 @@ public class SchedulerCommandFacade {
     }
   }
 
-  private JobDefinition newJob(
-      SchedulerCommands.JobDraft draft, String actor, Instant now) {
+  private JobDefinition newJob(SchedulerCommands.JobDraft draft, String actor, Instant now) {
     return new JobDefinition(
         draft.jobId(),
         draft.namespace(),
