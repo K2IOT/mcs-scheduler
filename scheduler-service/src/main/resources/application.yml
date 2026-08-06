@@ -7,6 +7,8 @@ spring:
   grpc:
     server:
       port: 9090
+  flyway:
+    default-schema: public
   quartz:
     jdbc:
       initialize-schema: never
