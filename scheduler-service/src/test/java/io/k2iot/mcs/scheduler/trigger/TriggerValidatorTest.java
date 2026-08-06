@@ -128,6 +128,38 @@ class TriggerValidatorTest {
   }
 
   @Test
+  void acceptsDailyIntervalAlignedToStartTimeWithinNarrowEndWindow() {
+    Instant validationTime = Instant.parse("2026-08-06T01:07:00Z");
+    TriggerDefinition trigger =
+        new TriggerDefinition(
+            TRIGGER_ID,
+            JOB_ID,
+            "billing",
+            "renewal",
+            null,
+            new DailyTimeIntervalTriggerSpec(
+                15,
+                ChronoUnit.MINUTES,
+                Set.of(DayOfWeek.THURSDAY),
+                LocalTime.of(8, 0),
+                LocalTime.of(8, 20)),
+            NOW,
+            Instant.parse("2026-08-06T01:20:00Z"),
+            5,
+            "Asia/Ho_Chi_Minh",
+            TriggerDefinition.MisfirePolicy.FIRE_ONCE_NOW,
+            Set.of(),
+            TriggerDefinition.State.ACTIVE,
+            1,
+            NOW,
+            "test",
+            NOW,
+            "test");
+
+    assertThatCode(() -> validator.validate(trigger, validationTime)).doesNotThrowAnyException();
+  }
+
+  @Test
   void rejectsMisfirePolicyThatDoesNotBelongToTriggerType() {
     TriggerDefinition trigger =
         trigger(
