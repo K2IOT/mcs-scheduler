@@ -14,7 +14,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 @Repository
-public final class JdbcTriggerRepository implements TriggerRepository {
+public class JdbcTriggerRepository implements TriggerRepository {
 
   private static final TypeReference<Set<String>> STRING_SET = new TypeReference<>() {};
 
