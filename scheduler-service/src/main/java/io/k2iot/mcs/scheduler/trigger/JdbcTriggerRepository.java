@@ -3,6 +3,8 @@ package io.k2iot.mcs.scheduler.trigger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -64,19 +66,19 @@ public class JdbcTriggerRepository implements TriggerRepository {
         .param("description", definition.description())
         .param("type", definition.type().name())
         .param("spec", writeJson(definition.spec()))
-        .param("startAt", definition.startAt())
-        .param("endAt", definition.endAt())
+        .param("startAt", postgresTimestamp(definition.startAt()))
+        .param("endAt", postgresTimestamp(definition.endAt()))
         .param("priority", definition.priority())
         .param("timezone", definition.timezone())
         .param("misfirePolicy", definition.misfirePolicy().name())
         .param("calendarNames", writeJson(definition.calendarNames()))
         .param("state", definition.state().name())
         .param("revision", definition.revision())
-        .param("createdAt", definition.createdAt())
+        .param("createdAt", postgresTimestamp(definition.createdAt()))
         .param("createdBy", definition.createdBy())
-        .param("updatedAt", definition.updatedAt())
+        .param("updatedAt", postgresTimestamp(definition.updatedAt()))
         .param("updatedBy", definition.updatedBy())
-        .param("deletedAt", deletedAt(definition))
+        .param("deletedAt", postgresTimestamp(deletedAt(definition)))
         .param("deletedBy", deletedBy(definition))
         .update();
   }
@@ -113,17 +115,17 @@ public class JdbcTriggerRepository implements TriggerRepository {
             .param("description", definition.description())
             .param("type", definition.type().name())
             .param("spec", writeJson(definition.spec()))
-            .param("startAt", definition.startAt())
-            .param("endAt", definition.endAt())
+            .param("startAt", postgresTimestamp(definition.startAt()))
+            .param("endAt", postgresTimestamp(definition.endAt()))
             .param("priority", definition.priority())
             .param("timezone", definition.timezone())
             .param("misfirePolicy", definition.misfirePolicy().name())
             .param("calendarNames", writeJson(definition.calendarNames()))
             .param("state", definition.state().name())
             .param("revision", definition.revision())
-            .param("updatedAt", definition.updatedAt())
+            .param("updatedAt", postgresTimestamp(definition.updatedAt()))
             .param("updatedBy", definition.updatedBy())
-            .param("deletedAt", deletedAt(definition))
+            .param("deletedAt", postgresTimestamp(deletedAt(definition)))
             .param("deletedBy", deletedBy(definition))
             .param("triggerId", definition.triggerId())
             .param("expectedRevision", expectedRevision)
@@ -182,6 +184,10 @@ public class JdbcTriggerRepository implements TriggerRepository {
   private Instant nullableInstant(ResultSet resultSet, String column) throws SQLException {
     var timestamp = resultSet.getTimestamp(column);
     return timestamp == null ? null : timestamp.toInstant();
+  }
+
+  private OffsetDateTime postgresTimestamp(Instant instant) {
+    return instant == null ? null : instant.atOffset(ZoneOffset.UTC);
   }
 
   private Instant deletedAt(TriggerDefinition definition) {
