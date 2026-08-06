@@ -4,14 +4,14 @@ import java.time.Duration;
 import java.util.Objects;
 
 public record SimpleIntervalTriggerSpec(Duration interval, Long repeatCount)
-        implements TriggerSpec {
+    implements TriggerSpec {
 
-    public SimpleIntervalTriggerSpec {
-        Objects.requireNonNull(interval, "interval");
-    }
+  public SimpleIntervalTriggerSpec {
+    Objects.requireNonNull(interval, "interval");
+  }
 
-    @Override
-    public TriggerDefinition.Type type() {
-        return TriggerDefinition.Type.SIMPLE_INTERVAL;
-    }
+  @Override
+  public TriggerDefinition.Type type() {
+    return TriggerDefinition.Type.SIMPLE_INTERVAL;
+  }
 }

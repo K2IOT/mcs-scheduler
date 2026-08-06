@@ -5,12 +5,12 @@ import java.util.Objects;
 
 public record OnceTriggerSpec(Instant fireAt) implements TriggerSpec {
 
-    public OnceTriggerSpec {
-        Objects.requireNonNull(fireAt, "fireAt");
-    }
+  public OnceTriggerSpec {
+    Objects.requireNonNull(fireAt, "fireAt");
+  }
 
-    @Override
-    public TriggerDefinition.Type type() {
-        return TriggerDefinition.Type.ONCE;
-    }
+  @Override
+  public TriggerDefinition.Type type() {
+    return TriggerDefinition.Type.ONCE;
+  }
 }

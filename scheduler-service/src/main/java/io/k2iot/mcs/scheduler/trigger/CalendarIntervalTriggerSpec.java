@@ -5,12 +5,12 @@ import java.util.Objects;
 
 public record CalendarIntervalTriggerSpec(int interval, ChronoUnit unit) implements TriggerSpec {
 
-    public CalendarIntervalTriggerSpec {
-        Objects.requireNonNull(unit, "unit");
-    }
+  public CalendarIntervalTriggerSpec {
+    Objects.requireNonNull(unit, "unit");
+  }
 
-    @Override
-    public TriggerDefinition.Type type() {
-        return TriggerDefinition.Type.CALENDAR_INTERVAL;
-    }
+  @Override
+  public TriggerDefinition.Type type() {
+    return TriggerDefinition.Type.CALENDAR_INTERVAL;
+  }
 }

@@ -4,12 +4,12 @@ import java.util.Objects;
 
 public record CronTriggerSpec(String expression) implements TriggerSpec {
 
-    public CronTriggerSpec {
-        Objects.requireNonNull(expression, "expression");
-    }
+  public CronTriggerSpec {
+    Objects.requireNonNull(expression, "expression");
+  }
 
-    @Override
-    public TriggerDefinition.Type type() {
-        return TriggerDefinition.Type.CRON;
-    }
+  @Override
+  public TriggerDefinition.Type type() {
+    return TriggerDefinition.Type.CRON;
+  }
 }
