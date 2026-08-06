@@ -1,8 +1,5 @@
 package io.k2iot.mcs.scheduler.destination;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -10,6 +7,9 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 public final class JdbcDestinationRepository implements DestinationRepository {
@@ -17,11 +17,11 @@ public final class JdbcDestinationRepository implements DestinationRepository {
   private static final TypeReference<Map<String, String>> STRING_MAP = new TypeReference<>() {};
 
   private final JdbcClient jdbc;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
-  public JdbcDestinationRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
+  public JdbcDestinationRepository(JdbcClient jdbc, JsonMapper jsonMapper) {
     this.jdbc = jdbc;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -58,8 +58,8 @@ public final class JdbcDestinationRepository implements DestinationRepository {
 
   private Map<String, String> readStringMap(String json) {
     try {
-      return objectMapper.readValue(json, STRING_MAP);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.readValue(json, STRING_MAP);
+    } catch (JacksonException exception) {
       throw new IllegalStateException("Stored destination headers are invalid JSON", exception);
     }
   }
