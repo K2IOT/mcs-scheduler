@@ -2,8 +2,6 @@ package io.k2iot.mcs.scheduler.command;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.k2iot.mcs.scheduler.destination.DestinationDefinition;
 import io.k2iot.mcs.scheduler.job.ConcurrencyPolicy;
 import io.k2iot.mcs.scheduler.job.JobDefinition;
 import io.k2iot.mcs.scheduler.job.JobRepository;
@@ -20,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import tools.jackson.databind.json.JsonMapper;
 
 class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
 
@@ -34,7 +33,7 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
   @Autowired JobRepository jobRepository;
   @Autowired TriggerRepository triggerRepository;
   @Autowired CommandRequestRepository commandRequestRepository;
-  @Autowired ObjectMapper objectMapper;
+  @Autowired JsonMapper jsonMapper;
 
   @BeforeEach
   void cleanDatabase() {
@@ -100,17 +99,17 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
             "billing",
             JOB_ID,
             "a".repeat(64),
-            objectMapper.valueToTree(Map.of("jobId", JOB_ID.toString())),
+            jsonMapper.valueToTree(Map.of("jobId", JOB_ID.toString())),
             NOW);
 
     commandRequestRepository.insert(request);
     commandRequestRepository.complete(
-        requestId, objectMapper.valueToTree(Map.of("jobId", JOB_ID.toString())), NOW.plusSeconds(1));
+        requestId, jsonMapper.valueToTree(Map.of("jobId", JOB_ID.toString())), NOW.plusSeconds(1));
 
     CommandRequest stored = commandRequestRepository.findByRequestId(requestId).orElseThrow();
     assertThat(stored.requestHash()).isEqualTo("a".repeat(64));
     assertThat(stored.status()).isEqualTo(CommandRequest.Status.COMPLETED);
-    assertThat(stored.responseJson().path("jobId").asText()).isEqualTo(JOB_ID.toString());
+    assertThat(stored.responseJson().path("jobId").asString()).isEqualTo(JOB_ID.toString());
     assertThat(stored.processedAt()).isEqualTo(NOW.plusSeconds(1));
   }
 
