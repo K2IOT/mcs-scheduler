@@ -10,12 +10,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Repository;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
-@Repository
 public class JdbcTriggerRepository implements TriggerRepository {
 
   private static final TypeReference<Set<String>> STRING_SET = new TypeReference<>() {};
