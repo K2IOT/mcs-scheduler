@@ -9,7 +9,7 @@ public interface CommandRequestRepository {
 
   Optional<CommandRequest> findByRequestId(UUID requestId);
 
-  void insert(CommandRequest request);
+  boolean insertIfAbsent(CommandRequest request);
 
   void complete(UUID requestId, JsonNode responseJson, Instant processedAt);
 }
