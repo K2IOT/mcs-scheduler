@@ -9,12 +9,14 @@ import io.k2iot.mcs.scheduler.job.JobDefinition;
 import io.k2iot.mcs.scheduler.job.JobRepository;
 import io.k2iot.mcs.scheduler.job.RecoveryPolicy;
 import io.k2iot.mcs.scheduler.testing.PostgresIntegrationTestBase;
+import io.k2iot.mcs.scheduler.trigger.CronTriggerSpec;
 import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
 import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +32,11 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
 
   private static final Instant NOW = Instant.parse("2026-08-06T10:30:00Z");
   private static final UUID REQUEST_ID = UUID.fromString("f0aacd2f-1e28-41f5-84ed-7f72bbc1ae11");
+  private static final UUID TRIGGER_REQUEST_ID =
+      UUID.fromString("c0195210-228d-430b-a4b4-f2351d761ec6");
   private static final UUID JOB_ID = UUID.fromString("85fd9027-cf22-4e8c-af20-90a236c35e3c");
+  private static final UUID TRIGGER_ID =
+      UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
   private static final UUID DESTINATION_ID =
       UUID.fromString("6b5d06c8-6a48-4d88-9a20-46cbcb727bd9");
 
@@ -92,6 +98,22 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
     assertThat(projection.createdJobs).isEqualTo(1);
   }
 
+  @Test
+  void completedTriggerRequestReplaysStoredPolymorphicResponse() {
+    facade.createJob(createJobCommand());
+    TriggerDefinition created = facade.createTrigger(createTriggerCommand());
+    jdbc.update(
+        "update scheduler.trigger_definition set name = 'changed-trigger', revision = 2 where trigger_id = ?",
+        TRIGGER_ID);
+
+    TriggerDefinition replayed = facade.createTrigger(createTriggerCommand());
+
+    assertThat(replayed).isEqualTo(created);
+    assertThat(replayed.spec()).isEqualTo(new CronTriggerSpec("0 0 12 * * ?"));
+    assertThat(replayed.revision()).isEqualTo(1);
+    assertThat(projection.createdTriggers).isEqualTo(1);
+  }
+
   private SchedulerCommands.CreateJob createJobCommand() {
     return new SchedulerCommands.CreateJob(
         REQUEST_ID,
@@ -108,6 +130,25 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
             ConcurrencyPolicy.DISALLOW,
             RecoveryPolicy.REQUEST_RECOVERY,
             true),
+        "integration-test");
+  }
+
+  private SchedulerCommands.CreateTrigger createTriggerCommand() {
+    return new SchedulerCommands.CreateTrigger(
+        TRIGGER_REQUEST_ID,
+        new SchedulerCommands.TriggerDraft(
+            TRIGGER_ID,
+            JOB_ID,
+            "billing",
+            "invoice-noon",
+            "Run invoice scheduler at noon",
+            new CronTriggerSpec("0 0 12 * * ?"),
+            NOW.plusSeconds(60),
+            null,
+            5,
+            "UTC",
+            TriggerDefinition.MisfirePolicy.DO_NOTHING,
+            Set.of()),
         "integration-test");
   }
 
@@ -167,10 +208,12 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
 
     private boolean failJobCreation;
     private int createdJobs;
+    private int createdTriggers;
 
     void reset() {
       failJobCreation = false;
       createdJobs = 0;
+      createdTriggers = 0;
     }
 
     @Override
@@ -194,7 +237,9 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
     public void deleteJob(JobDefinition definition) {}
 
     @Override
-    public void createTrigger(TriggerDefinition definition) {}
+    public void createTrigger(TriggerDefinition definition) {
+      createdTriggers++;
+    }
 
     @Override
     public void replaceTrigger(TriggerDefinition definition) {}
