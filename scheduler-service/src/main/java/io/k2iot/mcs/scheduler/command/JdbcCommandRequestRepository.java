@@ -3,6 +3,8 @@ package io.k2iot.mcs.scheduler.command;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -57,7 +59,7 @@ public class JdbcCommandRequestRepository implements CommandRequestRepository {
         .param("requestHash", request.requestHash())
         .param("payload", writeJson(request.payload()))
         .param("status", request.status().name())
-        .param("requestedAt", request.requestedAt())
+        .param("requestedAt", postgresTimestamp(request.requestedAt()))
         .update();
   }
 
@@ -74,7 +76,7 @@ public class JdbcCommandRequestRepository implements CommandRequestRepository {
                 where request_id = :requestId and status = 'PROCESSING'
                 """)
             .param("responseJson", writeJson(responseJson))
-            .param("processedAt", processedAt)
+            .param("processedAt", postgresTimestamp(processedAt))
             .param("requestId", requestId.toString())
             .update();
     if (updated != 1) {
@@ -97,6 +99,10 @@ public class JdbcCommandRequestRepository implements CommandRequestRepository {
         resultSet.getTimestamp("requested_at").toInstant(),
         processedAt == null ? null : processedAt.toInstant(),
         resultSet.getString("last_error"));
+  }
+
+  private OffsetDateTime postgresTimestamp(Instant instant) {
+    return instant == null ? null : instant.atOffset(ZoneOffset.UTC);
   }
 
   private JsonNode readJson(String json) {
