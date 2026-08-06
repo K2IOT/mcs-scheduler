@@ -8,10 +8,12 @@ import io.k2iot.mcs.scheduler.job.JobDefinition;
 import io.k2iot.mcs.scheduler.job.RecoveryPolicy;
 import io.k2iot.mcs.scheduler.testing.PostgresIntegrationTestBase;
 import io.k2iot.mcs.scheduler.trigger.CronTriggerSpec;
+import io.k2iot.mcs.scheduler.trigger.OnceTriggerSpec;
 import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -30,9 +32,13 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
   private static final UUID REQUEST_ID = UUID.fromString("f0aacd2f-1e28-41f5-84ed-7f72bbc1ae11");
   private static final UUID TRIGGER_REQUEST_ID =
       UUID.fromString("c0195210-228d-430b-a4b4-f2351d761ec6");
+  private static final UUID SCHEDULE_REQUEST_ID =
+      UUID.fromString("484156b2-b477-447a-ae99-0f3e09532871");
   private static final UUID JOB_ID = UUID.fromString("85fd9027-cf22-4e8c-af20-90a236c35e3c");
   private static final UUID TRIGGER_ID =
       UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
+  private static final UUID SECOND_TRIGGER_ID =
+      UUID.fromString("d0b83d50-bb50-4a65-b17c-a84ac9b39cc3");
   private static final UUID DESTINATION_ID =
       UUID.fromString("6b5d06c8-6a48-4d88-9a20-46cbcb727bd9");
 
@@ -110,42 +116,87 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
     assertThat(projection.createdTriggers).isEqualTo(1);
   }
 
+  @Test
+  void createSchedulePersistsAndReplaysMultipleTriggersForOneJob() {
+    SchedulerCommands.CreateSchedule command = createScheduleCommand();
+
+    SchedulerCommands.ScheduleResult created = facade.createSchedule(command);
+    SchedulerCommands.ScheduleResult replayed = facade.createSchedule(command);
+
+    assertThat(created.triggers()).hasSize(2);
+    assertThat(created.triggers()).extracting(TriggerDefinition::jobId).containsOnly(JOB_ID);
+    assertThat(replayed).isEqualTo(created);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from scheduler.trigger_definition where job_id = ?",
+                Integer.class,
+                JOB_ID))
+        .isEqualTo(2);
+    assertThat(projection.createdJobs).isEqualTo(1);
+    assertThat(projection.createdTriggers).isEqualTo(2);
+  }
+
   private SchedulerCommands.CreateJob createJobCommand() {
-    return new SchedulerCommands.CreateJob(
-        REQUEST_ID,
-        new SchedulerCommands.JobDraft(
-            JOB_ID,
-            "billing",
-            "invoice-due",
-            "Emit invoice due events",
-            DESTINATION_ID,
-            3,
-            "billing.invoice.due",
-            Map.of("invoiceId", "INV-2026-001"),
-            Map.of("tenant", "mcs"),
-            ConcurrencyPolicy.DISALLOW,
-            RecoveryPolicy.REQUEST_RECOVERY,
-            true),
-        "integration-test");
+    return new SchedulerCommands.CreateJob(REQUEST_ID, jobDraft(), "integration-test");
+  }
+
+  private SchedulerCommands.JobDraft jobDraft() {
+    return new SchedulerCommands.JobDraft(
+        JOB_ID,
+        "billing",
+        "invoice-due",
+        "Emit invoice due events",
+        DESTINATION_ID,
+        3,
+        "billing.invoice.due",
+        Map.of("invoiceId", "INV-2026-001"),
+        Map.of("tenant", "mcs"),
+        ConcurrencyPolicy.DISALLOW,
+        RecoveryPolicy.REQUEST_RECOVERY,
+        true);
   }
 
   private SchedulerCommands.CreateTrigger createTriggerCommand() {
     return new SchedulerCommands.CreateTrigger(
-        TRIGGER_REQUEST_ID,
+        TRIGGER_REQUEST_ID, cronTriggerDraft(), "integration-test");
+  }
+
+  private SchedulerCommands.CreateSchedule createScheduleCommand() {
+    SchedulerCommands.TriggerDraft once =
         new SchedulerCommands.TriggerDraft(
-            TRIGGER_ID,
+            SECOND_TRIGGER_ID,
             JOB_ID,
             "billing",
-            "invoice-noon",
-            "Run invoice scheduler at noon",
-            new CronTriggerSpec("0 0 12 * * ?"),
+            "invoice-once",
+            "One-shot invoice scheduler",
+            new OnceTriggerSpec(NOW.plusSeconds(7_200)),
             NOW.plusSeconds(60),
             null,
             5,
             "UTC",
-            TriggerDefinition.MisfirePolicy.DO_NOTHING,
-            Set.of()),
+            TriggerDefinition.MisfirePolicy.FIRE_NOW,
+            Set.of());
+    return new SchedulerCommands.CreateSchedule(
+        SCHEDULE_REQUEST_ID,
+        jobDraft(),
+        List.of(cronTriggerDraft(), once),
         "integration-test");
+  }
+
+  private SchedulerCommands.TriggerDraft cronTriggerDraft() {
+    return new SchedulerCommands.TriggerDraft(
+        TRIGGER_ID,
+        JOB_ID,
+        "billing",
+        "invoice-noon",
+        "Run invoice scheduler at noon",
+        new CronTriggerSpec("0 0 12 * * ?"),
+        NOW.plusSeconds(60),
+        null,
+        5,
+        "UTC",
+        TriggerDefinition.MisfirePolicy.DO_NOTHING,
+        Set.of());
   }
 
   private int count(String table) {
