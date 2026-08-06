@@ -111,8 +111,8 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
                 '{}'::jsonb, true, ?, 'integration-test', ?, 'integration-test')
         """,
         DESTINATION_ID,
-        NOW,
-        NOW);
+        NOW.atOffset(ZoneOffset.UTC),
+        NOW.atOffset(ZoneOffset.UTC));
   }
 
   @TestConfiguration(proxyBeanMethods = false)
