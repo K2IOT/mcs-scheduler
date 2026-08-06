@@ -1,7 +1,5 @@
 package io.k2iot.mcs.scheduler.command;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.k2iot.mcs.scheduler.destination.DestinationDefinition;
 import io.k2iot.mcs.scheduler.destination.DestinationRepository;
 import io.k2iot.mcs.scheduler.job.JobDefinition;
@@ -18,15 +16,17 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
-public final class SchedulerCommandFacade {
+public class SchedulerCommandFacade {
 
   private final JobRepository jobRepository;
   private final TriggerRepository triggerRepository;
   private final DestinationRepository destinationRepository;
   private final CommandRequestRepository commandRequestRepository;
   private final SchedulerProjectionPort schedulerProjection;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
   private final Clock clock;
   private final TriggerValidator triggerValidator;
 
@@ -36,7 +36,7 @@ public final class SchedulerCommandFacade {
       DestinationRepository destinationRepository,
       CommandRequestRepository commandRequestRepository,
       SchedulerProjectionPort schedulerProjection,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       Clock clock) {
     this(
         jobRepository,
@@ -44,7 +44,7 @@ public final class SchedulerCommandFacade {
         destinationRepository,
         commandRequestRepository,
         schedulerProjection,
-        objectMapper,
+        jsonMapper,
         clock,
         new TriggerValidator());
   }
@@ -55,7 +55,7 @@ public final class SchedulerCommandFacade {
       DestinationRepository destinationRepository,
       CommandRequestRepository commandRequestRepository,
       SchedulerProjectionPort schedulerProjection,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       Clock clock,
       TriggerValidator triggerValidator) {
     this.jobRepository = Objects.requireNonNull(jobRepository, "jobRepository");
@@ -65,7 +65,7 @@ public final class SchedulerCommandFacade {
     this.commandRequestRepository =
         Objects.requireNonNull(commandRequestRepository, "commandRequestRepository");
     this.schedulerProjection = Objects.requireNonNull(schedulerProjection, "schedulerProjection");
-    this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
+    this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper");
     this.clock = Objects.requireNonNull(clock, "clock");
     this.triggerValidator = Objects.requireNonNull(triggerValidator, "triggerValidator");
   }
@@ -394,8 +394,8 @@ public final class SchedulerCommandFacade {
       Object commandPayload,
       Supplier<T> replay,
       Supplier<T> action) {
-    JsonNode payload = objectMapper.valueToTree(commandPayload);
-    String requestHash = RequestFingerprint.sha256(objectMapper, commandPayload);
+    JsonNode payload = jsonMapper.valueToTree(commandPayload);
+    String requestHash = RequestFingerprint.sha256(jsonMapper, commandPayload);
     var existing = commandRequestRepository.findByRequestId(requestId);
     if (existing.isPresent()) {
       CommandRequest request = existing.orElseThrow();
@@ -426,7 +426,7 @@ public final class SchedulerCommandFacade {
             payload,
             requestedAt));
     T result = action.get();
-    commandRequestRepository.complete(requestId, objectMapper.valueToTree(result), clock.instant());
+    commandRequestRepository.complete(requestId, jsonMapper.valueToTree(result), clock.instant());
     return result;
   }
 
