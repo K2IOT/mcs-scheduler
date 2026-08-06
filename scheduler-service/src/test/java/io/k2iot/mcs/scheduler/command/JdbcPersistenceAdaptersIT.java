@@ -91,18 +91,9 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
   @Test
   void storesFingerprintAndCompletedResponseForIdempotentReplay() {
     UUID requestId = UUID.fromString("f0aacd2f-1e28-41f5-84ed-7f72bbc1ae11");
-    CommandRequest request =
-        CommandRequest.processing(
-            UUID.randomUUID(),
-            requestId,
-            "CREATE_JOB",
-            "billing",
-            JOB_ID,
-            "a".repeat(64),
-            jsonMapper.valueToTree(Map.of("jobId", JOB_ID.toString())),
-            NOW);
+    CommandRequest request = commandRequest(requestId, "a".repeat(64));
 
-    commandRequestRepository.insert(request);
+    assertThat(commandRequestRepository.insertIfAbsent(request)).isTrue();
     commandRequestRepository.complete(
         requestId, jsonMapper.valueToTree(Map.of("jobId", JOB_ID.toString())), NOW.plusSeconds(1));
 
@@ -111,6 +102,29 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
     assertThat(stored.status()).isEqualTo(CommandRequest.Status.COMPLETED);
     assertThat(stored.responseJson().path("jobId").asString()).isEqualTo(JOB_ID.toString());
     assertThat(stored.processedAt()).isEqualTo(NOW.plusSeconds(1));
+  }
+
+  @Test
+  void claimsARequestIdOnlyOnce() {
+    UUID requestId = UUID.fromString("f0aacd2f-1e28-41f5-84ed-7f72bbc1ae11");
+
+    assertThat(commandRequestRepository.insertIfAbsent(commandRequest(requestId, "a".repeat(64))))
+        .isTrue();
+    assertThat(commandRequestRepository.insertIfAbsent(commandRequest(requestId, "b".repeat(64))))
+        .isFalse();
+    assertThat(count("scheduler.command_request")).isEqualTo(1);
+  }
+
+  private CommandRequest commandRequest(UUID requestId, String requestHash) {
+    return CommandRequest.processing(
+        UUID.randomUUID(),
+        requestId,
+        "CREATE_JOB",
+        "billing",
+        JOB_ID,
+        requestHash,
+        jsonMapper.valueToTree(Map.of("jobId", JOB_ID.toString())),
+        NOW);
   }
 
   private JobDefinition job(long revision, JobDefinition.State state, Instant updatedAt) {
@@ -133,6 +147,11 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
         "integration-test",
         updatedAt,
         "integration-test");
+  }
+
+  private int count(String table) {
+    Integer count = jdbc.queryForObject("select count(*) from " + table, Integer.class);
+    return count == null ? 0 : count;
   }
 
   private void insertDestination() {
