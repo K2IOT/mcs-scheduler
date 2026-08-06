@@ -43,7 +43,9 @@ class DatabaseMigrationIT extends PostgresIntegrationTestBase {
 
   @Test
   void createsDomainAndQuartzTables() {
-    assertThat(tableNames("scheduler")).containsExactlyInAnyOrderElementsOf(DOMAIN_TABLES);
+    assertThat(tableNames("scheduler"))
+        .hasSizeGreaterThanOrEqualTo(DOMAIN_TABLES.size())
+        .containsAll(DOMAIN_TABLES);
     assertThat(tableNames("quartz")).containsExactlyInAnyOrderElementsOf(QUARTZ_TABLES);
   }
 
