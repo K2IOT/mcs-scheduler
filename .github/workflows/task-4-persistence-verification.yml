@@ -31,7 +31,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Run focused Task 4 tests
-        run: ./mvnw -B -pl scheduler-service -am -Dtest=PersistenceSchemaIT,RequestFingerprintTest,SchedulerCommandFacadeTest -Dsurefire.failIfNoSpecifiedTests=false test
+        run: ./mvnw -B -pl scheduler-service -am -Dtest=PersistenceSchemaIT,JdbcPersistenceAdaptersIT,RequestFingerprintTest,SchedulerCommandFacadeTest -Dsurefire.failIfNoSpecifiedTests=false test
 
       - name: Check Java formatting
         run: ./mvnw -B spotless:check
