@@ -135,11 +135,7 @@ public final class SchedulerCommands {
   }
 
   public record FireTriggerNow(
-      UUID requestId,
-      UUID triggerId,
-      String namespace,
-      UUID manualFireId,
-      String actor) {
+      UUID requestId, UUID triggerId, String namespace, UUID manualFireId, String actor) {
     public FireTriggerNow {
       Objects.requireNonNull(requestId, "requestId");
       Objects.requireNonNull(triggerId, "triggerId");
