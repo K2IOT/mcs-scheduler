@@ -27,8 +27,7 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
   private static final UUID DESTINATION_ID =
       UUID.fromString("6b5d06c8-6a48-4d88-9a20-46cbcb727bd9");
   private static final UUID JOB_ID = UUID.fromString("85fd9027-cf22-4e8c-af20-90a236c35e3c");
-  private static final UUID TRIGGER_ID =
-      UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
+  private static final UUID TRIGGER_ID = UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
 
   @Autowired JdbcTemplate jdbc;
   @Autowired JobRepository jobRepository;
