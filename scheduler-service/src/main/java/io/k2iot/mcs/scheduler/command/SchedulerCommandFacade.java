@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -404,7 +405,10 @@ public class SchedulerCommandFacade {
             "IDEMPOTENCY_CONFLICT", "Request ID was already used with a different payload");
       }
       return switch (request.status()) {
-        case COMPLETED -> replay.get();
+        case COMPLETED ->
+            request.responseJson() == null
+                ? replay.get()
+                : decodeStoredResponse(commandType, request.responseJson());
         case RECEIVED, PROCESSING ->
             throw new SchedulerCommandException(
                 "COMMAND_IN_PROGRESS", "The command with this request ID is still in progress");
@@ -428,6 +432,34 @@ public class SchedulerCommandFacade {
     T result = action.get();
     commandRequestRepository.complete(requestId, jsonMapper.valueToTree(result), clock.instant());
     return result;
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> T decodeStoredResponse(String commandType, JsonNode responseJson) {
+    Class<?> responseType =
+        switch (commandType) {
+          case "CREATE_JOB", "UPDATE_JOB", "PAUSE_JOB", "RESUME_JOB", "DELETE_JOB" ->
+              JobDefinition.class;
+          case "CREATE_TRIGGER",
+              "REPLACE_TRIGGER",
+              "PAUSE_TRIGGER",
+              "RESUME_TRIGGER",
+              "DELETE_TRIGGER" -> TriggerDefinition.class;
+          case "CREATE_SCHEDULE" -> SchedulerCommands.ScheduleResult.class;
+          case "FIRE_TRIGGER_NOW" -> ManualFireResult.class;
+          default ->
+              throw new SchedulerCommandException(
+                  "UNSUPPORTED_COMMAND_RESPONSE",
+                  "No stored response mapping exists for command type " + commandType);
+        };
+    try {
+      return (T) jsonMapper.treeToValue(responseJson, responseType);
+    } catch (JacksonException exception) {
+      throw new SchedulerCommandException(
+          "INVALID_STORED_RESPONSE",
+          "Stored response cannot be decoded for command type " + commandType,
+          exception);
+    }
   }
 
   private SchedulerCommands.ScheduleResult replaySchedule(
