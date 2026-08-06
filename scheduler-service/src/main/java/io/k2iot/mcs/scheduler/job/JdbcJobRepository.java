@@ -3,6 +3,8 @@ package io.k2iot.mcs.scheduler.job;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -70,11 +72,11 @@ public class JdbcJobRepository implements JobRepository {
         .param("durable", definition.durable())
         .param("state", definition.state().name())
         .param("revision", definition.revision())
-        .param("createdAt", definition.createdAt())
+        .param("createdAt", postgresTimestamp(definition.createdAt()))
         .param("createdBy", definition.createdBy())
-        .param("updatedAt", definition.updatedAt())
+        .param("updatedAt", postgresTimestamp(definition.updatedAt()))
         .param("updatedBy", definition.updatedBy())
-        .param("deletedAt", deletedAt(definition))
+        .param("deletedAt", postgresTimestamp(deletedAt(definition)))
         .param("deletedBy", deletedBy(definition))
         .update();
   }
@@ -117,9 +119,9 @@ public class JdbcJobRepository implements JobRepository {
             .param("durable", definition.durable())
             .param("state", definition.state().name())
             .param("revision", definition.revision())
-            .param("updatedAt", definition.updatedAt())
+            .param("updatedAt", postgresTimestamp(definition.updatedAt()))
             .param("updatedBy", definition.updatedBy())
-            .param("deletedAt", deletedAt(definition))
+            .param("deletedAt", postgresTimestamp(deletedAt(definition)))
             .param("deletedBy", deletedBy(definition))
             .param("jobId", definition.jobId())
             .param("expectedRevision", expectedRevision)
@@ -147,6 +149,10 @@ public class JdbcJobRepository implements JobRepository {
         resultSet.getString("created_by"),
         resultSet.getTimestamp("updated_at").toInstant(),
         resultSet.getString("updated_by"));
+  }
+
+  private OffsetDateTime postgresTimestamp(Instant instant) {
+    return instant == null ? null : instant.atOffset(ZoneOffset.UTC);
   }
 
   private Instant deletedAt(JobDefinition definition) {
