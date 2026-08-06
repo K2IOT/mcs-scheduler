@@ -11,6 +11,7 @@ import io.k2iot.mcs.scheduler.trigger.CronTriggerSpec;
 import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
 import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -145,7 +146,7 @@ class JdbcPersistenceAdaptersIT extends PostgresIntegrationTestBase {
                 '{}'::jsonb, true, ?, 'integration-test', ?, 'integration-test')
         """,
         DESTINATION_ID,
-        NOW,
-        NOW);
+        NOW.atOffset(ZoneOffset.UTC),
+        NOW.atOffset(ZoneOffset.UTC));
   }
 }
