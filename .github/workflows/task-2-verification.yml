@@ -15,7 +15,7 @@ permissions:
 jobs:
   database-migration:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -32,3 +32,6 @@ jobs:
 
       - name: Run focused database migration integration test
         run: ./mvnw -B -pl scheduler-service -am -Dtest=DatabaseMigrationIT -Dsurefire.failIfNoSpecifiedTests=false test
+
+      - name: Run full Maven verification
+        run: ./mvnw -B verify
