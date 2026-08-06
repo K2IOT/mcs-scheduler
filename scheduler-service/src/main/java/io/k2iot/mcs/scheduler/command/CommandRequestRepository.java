@@ -1,9 +1,9 @@
 package io.k2iot.mcs.scheduler.command;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import tools.jackson.databind.JsonNode;
 
 public interface CommandRequestRepository {
 
