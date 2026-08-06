@@ -12,7 +12,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @Repository
-public final class JdbcCommandRequestRepository implements CommandRequestRepository {
+public class JdbcCommandRequestRepository implements CommandRequestRepository {
 
   private final JdbcClient jdbc;
   private final JsonMapper jsonMapper;
