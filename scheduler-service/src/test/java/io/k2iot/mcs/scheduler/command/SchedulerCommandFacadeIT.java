@@ -35,8 +35,7 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
   private static final UUID SCHEDULE_REQUEST_ID =
       UUID.fromString("484156b2-b477-447a-ae99-0f3e09532871");
   private static final UUID JOB_ID = UUID.fromString("85fd9027-cf22-4e8c-af20-90a236c35e3c");
-  private static final UUID TRIGGER_ID =
-      UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
+  private static final UUID TRIGGER_ID = UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
   private static final UUID SECOND_TRIGGER_ID =
       UUID.fromString("d0b83d50-bb50-4a65-b17c-a84ac9b39cc3");
   private static final UUID DESTINATION_ID =
@@ -177,10 +176,7 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
             TriggerDefinition.MisfirePolicy.FIRE_NOW,
             Set.of());
     return new SchedulerCommands.CreateSchedule(
-        SCHEDULE_REQUEST_ID,
-        jobDraft(),
-        List.of(cronTriggerDraft(), once),
-        "integration-test");
+        SCHEDULE_REQUEST_ID, jobDraft(), List.of(cronTriggerDraft(), once), "integration-test");
   }
 
   private SchedulerCommands.TriggerDraft cronTriggerDraft() {
