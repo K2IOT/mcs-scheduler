@@ -77,6 +77,21 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
     assertThat(projection.createdJobs).isEqualTo(1);
   }
 
+  @Test
+  void completedRequestReplaysStoredResponseAfterDomainRowChanges() {
+    JobDefinition created = facade.createJob(createJobCommand());
+    jdbc.update(
+        "update scheduler.job_definition set name = 'changed-after-command', revision = 2 where job_id = ?",
+        JOB_ID);
+
+    JobDefinition replayed = facade.createJob(createJobCommand());
+
+    assertThat(replayed).isEqualTo(created);
+    assertThat(replayed.name()).isEqualTo("invoice-due");
+    assertThat(replayed.revision()).isEqualTo(1);
+    assertThat(projection.createdJobs).isEqualTo(1);
+  }
+
   private SchedulerCommands.CreateJob createJobCommand() {
     return new SchedulerCommands.CreateJob(
         REQUEST_ID,
