@@ -1,8 +1,5 @@
 package io.k2iot.mcs.scheduler.trigger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -12,6 +9,9 @@ import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 @Repository
 public final class JdbcTriggerRepository implements TriggerRepository {
@@ -19,11 +19,11 @@ public final class JdbcTriggerRepository implements TriggerRepository {
   private static final TypeReference<Set<String>> STRING_SET = new TypeReference<>() {};
 
   private final JdbcClient jdbc;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
-  public JdbcTriggerRepository(JdbcClient jdbc, ObjectMapper objectMapper) {
+  public JdbcTriggerRepository(JdbcClient jdbc, JsonMapper jsonMapper) {
     this.jdbc = jdbc;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -141,8 +141,7 @@ public final class JdbcTriggerRepository implements TriggerRepository {
   }
 
   private TriggerDefinition mapTrigger(ResultSet resultSet, int rowNumber) throws SQLException {
-    TriggerDefinition.Type type =
-        TriggerDefinition.Type.valueOf(resultSet.getString("type"));
+    TriggerDefinition.Type type = TriggerDefinition.Type.valueOf(resultSet.getString("type"));
     return new TriggerDefinition(
         resultSet.getObject("trigger_id", UUID.class),
         resultSet.getObject("job_id", UUID.class),
@@ -174,8 +173,8 @@ public final class JdbcTriggerRepository implements TriggerRepository {
           case DAILY_TIME_INTERVAL -> DailyTimeIntervalTriggerSpec.class;
         };
     try {
-      return objectMapper.readValue(json, specClass);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.readValue(json, specClass);
+    } catch (JacksonException exception) {
       throw new IllegalStateException("Stored trigger specification is invalid", exception);
     }
   }
@@ -195,16 +194,16 @@ public final class JdbcTriggerRepository implements TriggerRepository {
 
   private String writeJson(Object value) {
     try {
-      return objectMapper.writeValueAsString(value);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.writeValueAsString(value);
+    } catch (JacksonException exception) {
       throw new IllegalArgumentException("Trigger JSON cannot be serialized", exception);
     }
   }
 
   private <T> T readJson(String json, TypeReference<T> type) {
     try {
-      return objectMapper.readValue(json, type);
-    } catch (JsonProcessingException exception) {
+      return jsonMapper.readValue(json, type);
+    } catch (JacksonException exception) {
       throw new IllegalStateException("Stored trigger JSON is invalid", exception);
     }
   }
