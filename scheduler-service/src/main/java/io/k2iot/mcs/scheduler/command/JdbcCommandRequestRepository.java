@@ -38,27 +38,30 @@ public class JdbcCommandRequestRepository implements CommandRequestRepository {
   }
 
   @Override
-  public void insert(CommandRequest request) {
-    jdbc.sql(
-            """
-            insert into scheduler.command_request (
-                command_request_id, request_id, command_type, namespace, aggregate_id,
-                request_hash, payload, status, response_json, requested_at, processed_at,
-                last_error)
-            values (
-                :commandRequestId, :requestId, :commandType, :namespace, :aggregateId,
-                :requestHash, cast(:payload as jsonb), :status, null, :requestedAt, null, null)
-            """)
-        .param("commandRequestId", request.commandRequestId())
-        .param("requestId", request.requestId().toString())
-        .param("commandType", request.commandType())
-        .param("namespace", request.namespace())
-        .param("aggregateId", request.aggregateId())
-        .param("requestHash", request.requestHash())
-        .param("payload", writeJson(request.payload()))
-        .param("status", request.status().name())
-        .param("requestedAt", postgresTimestamp(request.requestedAt()))
-        .update();
+  public boolean insertIfAbsent(CommandRequest request) {
+    int inserted =
+        jdbc.sql(
+                """
+                insert into scheduler.command_request (
+                    command_request_id, request_id, command_type, namespace, aggregate_id,
+                    request_hash, payload, status, response_json, requested_at, processed_at,
+                    last_error)
+                values (
+                    :commandRequestId, :requestId, :commandType, :namespace, :aggregateId,
+                    :requestHash, cast(:payload as jsonb), :status, null, :requestedAt, null, null)
+                on conflict (request_id) do nothing
+                """)
+            .param("commandRequestId", request.commandRequestId())
+            .param("requestId", request.requestId().toString())
+            .param("commandType", request.commandType())
+            .param("namespace", request.namespace())
+            .param("aggregateId", request.aggregateId())
+            .param("requestHash", request.requestHash())
+            .param("payload", writeJson(request.payload()))
+            .param("status", request.status().name())
+            .param("requestedAt", postgresTimestamp(request.requestedAt()))
+            .update();
+    return inserted == 1;
   }
 
   @Override
