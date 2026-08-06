@@ -64,13 +64,14 @@ class SchedulerCommandFacadeTest {
   void createJobPersistsDomainThenProjectsAndCompletesRequest() {
     SchedulerCommands.CreateJob command = createJobCommand();
     when(commandRequestRepository.findByRequestId(REQUEST_ID)).thenReturn(Optional.empty());
+    when(commandRequestRepository.insertIfAbsent(any(CommandRequest.class))).thenReturn(true);
     when(destinationRepository.findByIdAndVersion(DESTINATION_ID, 3))
         .thenReturn(Optional.of(destination(true, "billing")));
 
     JobDefinition result = facade.createJob(command);
 
     ArgumentCaptor<JobDefinition> definition = ArgumentCaptor.forClass(JobDefinition.class);
-    verify(commandRequestRepository).insert(any(CommandRequest.class));
+    verify(commandRequestRepository).insertIfAbsent(any(CommandRequest.class));
     verify(jobRepository).insert(definition.capture());
     verify(schedulerProjection).createJob(definition.getValue());
     verify(commandRequestRepository).complete(eq(REQUEST_ID), any(), eq(NOW));
@@ -83,6 +84,7 @@ class SchedulerCommandFacadeTest {
   @Test
   void rejectsDisabledDestinationBeforeWritingDomainState() {
     when(commandRequestRepository.findByRequestId(REQUEST_ID)).thenReturn(Optional.empty());
+    when(commandRequestRepository.insertIfAbsent(any(CommandRequest.class))).thenReturn(true);
     when(destinationRepository.findByIdAndVersion(DESTINATION_ID, 3))
         .thenReturn(Optional.of(destination(false, "billing")));
 
@@ -118,6 +120,38 @@ class SchedulerCommandFacadeTest {
     verify(jobRepository, never()).insert(any());
   }
 
+  @Test
+  void losingConcurrentClaimReplaysCompletedWinner() {
+    SchedulerCommands.CreateJob command = createJobCommand();
+    JobDefinition winner = expectedJob();
+    String requestHash = RequestFingerprint.sha256(jsonMapper, command);
+    CommandRequest completed =
+        new CommandRequest(
+            UUID.randomUUID(),
+            REQUEST_ID,
+            "CREATE_JOB",
+            "billing",
+            JOB_ID,
+            requestHash,
+            jsonMapper.valueToTree(command),
+            CommandRequest.Status.COMPLETED,
+            jsonMapper.valueToTree(winner),
+            NOW.minusSeconds(1),
+            NOW,
+            null);
+    when(commandRequestRepository.findByRequestId(REQUEST_ID))
+        .thenReturn(Optional.empty(), Optional.of(completed));
+    when(commandRequestRepository.insertIfAbsent(any(CommandRequest.class))).thenReturn(false);
+
+    JobDefinition result = facade.createJob(command);
+
+    assertThat(result).isEqualTo(winner);
+    verify(destinationRepository, never()).findByIdAndVersion(any(), any(Long.class));
+    verify(jobRepository, never()).insert(any());
+    verify(schedulerProjection, never()).createJob(any());
+    verify(commandRequestRepository, never()).complete(any(), any(), any());
+  }
+
   private SchedulerCommands.CreateJob createJobCommand() {
     SchedulerCommands.JobDraft draft =
         new SchedulerCommands.JobDraft(
@@ -134,6 +168,28 @@ class SchedulerCommandFacadeTest {
             RecoveryPolicy.REQUEST_RECOVERY,
             true);
     return new SchedulerCommands.CreateJob(REQUEST_ID, draft, "scheduler-test");
+  }
+
+  private JobDefinition expectedJob() {
+    return new JobDefinition(
+        JOB_ID,
+        "billing",
+        "invoice-due",
+        "Emit invoice due events",
+        DESTINATION_ID,
+        3,
+        "billing.invoice.due",
+        Map.of("invoiceId", "INV-2026-001"),
+        Map.of("tenant", "mcs"),
+        ConcurrencyPolicy.DISALLOW,
+        RecoveryPolicy.REQUEST_RECOVERY,
+        true,
+        JobDefinition.State.ACTIVE,
+        1,
+        NOW,
+        "scheduler-test",
+        NOW,
+        "scheduler-test");
   }
 
   private DestinationDefinition destination(boolean enabled, String namespace) {
