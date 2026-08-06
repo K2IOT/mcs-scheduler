@@ -3,15 +3,12 @@ package io.k2iot.mcs.scheduler.command;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.k2iot.mcs.scheduler.destination.DestinationRepository;
 import io.k2iot.mcs.scheduler.job.ConcurrencyPolicy;
 import io.k2iot.mcs.scheduler.job.JobDefinition;
-import io.k2iot.mcs.scheduler.job.JobRepository;
 import io.k2iot.mcs.scheduler.job.RecoveryPolicy;
 import io.k2iot.mcs.scheduler.testing.PostgresIntegrationTestBase;
 import io.k2iot.mcs.scheduler.trigger.CronTriggerSpec;
 import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
-import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -25,7 +22,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import tools.jackson.databind.json.JsonMapper;
 
 @Import(SchedulerCommandFacadeIT.CommandTestConfiguration.class)
 class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
@@ -182,25 +178,6 @@ class SchedulerCommandFacadeIT extends PostgresIntegrationTestBase {
     @Bean
     ControllableProjection schedulerProjectionPort() {
       return new ControllableProjection();
-    }
-
-    @Bean
-    SchedulerCommandFacade schedulerCommandFacade(
-        JobRepository jobRepository,
-        TriggerRepository triggerRepository,
-        DestinationRepository destinationRepository,
-        CommandRequestRepository commandRequestRepository,
-        ControllableProjection schedulerProjection,
-        JsonMapper jsonMapper,
-        Clock commandClock) {
-      return new SchedulerCommandFacade(
-          jobRepository,
-          triggerRepository,
-          destinationRepository,
-          commandRequestRepository,
-          schedulerProjection,
-          jsonMapper,
-          commandClock);
     }
   }
 
