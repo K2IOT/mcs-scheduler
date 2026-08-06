@@ -31,4 +31,4 @@ jobs:
         run: chmod +x mvnw
 
       - name: Run focused database migration integration test
-        run: ./mvnw -pl scheduler-service -am -Dtest=DatabaseMigrationIT test
+        run: ./mvnw -B -pl scheduler-service -am -Dtest=DatabaseMigrationIT -Dsurefire.failIfNoSpecifiedTests=false test
