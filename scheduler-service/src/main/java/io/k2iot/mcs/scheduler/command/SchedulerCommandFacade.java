@@ -399,27 +399,11 @@ public class SchedulerCommandFacade {
     String requestHash = RequestFingerprint.sha256(jsonMapper, commandPayload);
     var existing = commandRequestRepository.findByRequestId(requestId);
     if (existing.isPresent()) {
-      CommandRequest request = existing.orElseThrow();
-      if (!request.requestHash().equals(requestHash)) {
-        throw new SchedulerCommandException(
-            "IDEMPOTENCY_CONFLICT", "Request ID was already used with a different payload");
-      }
-      return switch (request.status()) {
-        case COMPLETED ->
-            request.responseJson() == null
-                ? replay.get()
-                : decodeStoredResponse(commandType, request.responseJson());
-        case RECEIVED, PROCESSING ->
-            throw new SchedulerCommandException(
-                "COMMAND_IN_PROGRESS", "The command with this request ID is still in progress");
-        case FAILED ->
-            throw new SchedulerCommandException(
-                "COMMAND_PREVIOUSLY_FAILED", "The command with this request ID previously failed");
-      };
+      return resolveExistingRequest(existing.orElseThrow(), requestHash, commandType, replay);
     }
 
     Instant requestedAt = clock.instant();
-    commandRequestRepository.insert(
+    CommandRequest processing =
         CommandRequest.processing(
             UUID.randomUUID(),
             requestId,
@@ -428,10 +412,42 @@ public class SchedulerCommandFacade {
             aggregateId,
             requestHash,
             payload,
-            requestedAt));
+            requestedAt);
+    if (!commandRequestRepository.insertIfAbsent(processing)) {
+      CommandRequest winner =
+          commandRequestRepository
+              .findByRequestId(requestId)
+              .orElseThrow(
+                  () ->
+                      new SchedulerCommandException(
+                          "IDEMPOTENCY_CLAIM_LOST",
+                          "Request ID was claimed but no command request is visible"));
+      return resolveExistingRequest(winner, requestHash, commandType, replay);
+    }
+
     T result = action.get();
     commandRequestRepository.complete(requestId, jsonMapper.valueToTree(result), clock.instant());
     return result;
+  }
+
+  private <T> T resolveExistingRequest(
+      CommandRequest request, String requestHash, String commandType, Supplier<T> replay) {
+    if (!request.requestHash().equals(requestHash)) {
+      throw new SchedulerCommandException(
+          "IDEMPOTENCY_CONFLICT", "Request ID was already used with a different payload");
+    }
+    return switch (request.status()) {
+      case COMPLETED ->
+          request.responseJson() == null
+              ? replay.get()
+              : decodeStoredResponse(commandType, request.responseJson());
+      case RECEIVED, PROCESSING ->
+          throw new SchedulerCommandException(
+              "COMMAND_IN_PROGRESS", "The command with this request ID is still in progress");
+      case FAILED ->
+          throw new SchedulerCommandException(
+              "COMMAND_PREVIOUSLY_FAILED", "The command with this request ID previously failed");
+    };
   }
 
   @SuppressWarnings("unchecked")
