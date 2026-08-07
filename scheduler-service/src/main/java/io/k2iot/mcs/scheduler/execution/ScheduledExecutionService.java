@@ -171,7 +171,8 @@ public class ScheduledExecutionService {
       return UUID.fromString(triggerKey.getName());
     } catch (IllegalArgumentException exception) {
       throw new IllegalStateException(
-          "Quartz trigger name is not a scheduler trigger UUID: " + triggerKey.getName(), exception);
+          "Quartz trigger name is not a scheduler trigger UUID: " + triggerKey.getName(),
+          exception);
     }
   }
 
