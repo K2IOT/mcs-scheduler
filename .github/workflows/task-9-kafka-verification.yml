@@ -31,7 +31,7 @@ jobs:
         run: chmod +x mvnw
 
       - name: Run focused Task 9 tests
-        run: ./mvnw -B -pl scheduler-service -am -Dtest=SchedulerCommandListenerTest,SchedulerCommandKafkaIT -Dsurefire.failIfNoSpecifiedTests=false test
+        run: ./mvnw -B -pl scheduler-service -am -Dtest=KafkaCommandMapperTest,SchedulerCommandListenerTest,SchedulerCommandKafkaIT -Dsurefire.failIfNoSpecifiedTests=false test
 
       - name: Check Java formatting
         run: ./mvnw -B spotless:check
