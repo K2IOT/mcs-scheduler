@@ -31,7 +31,8 @@ public final class JobController {
   public ResponseEntity<RestModels.JobResponse> createJob(
       @RequestHeader("Idempotency-Key") String idempotencyKey,
       @RequestBody RestModels.CreateJobRequest request) {
-    JobDefinition job = facade.createJob(mapper.createJob(mapper.requestId(idempotencyKey), request));
+    JobDefinition job =
+        facade.createJob(mapper.createJob(mapper.requestId(idempotencyKey), request));
     return ResponseEntity.created(URI.create("/api/v1/jobs/" + job.jobId()))
         .eTag(etag(job.revision()))
         .body(new RestModels.JobResponse(job));
@@ -91,10 +92,7 @@ public final class JobController {
       @RequestBody RestModels.MutationRequest request) {
     facade.deleteJob(
         mapper.jobMutation(
-            mapper.requestId(idempotencyKey),
-            jobId,
-            mapper.expectedRevision(ifMatch),
-            request));
+            mapper.requestId(idempotencyKey), jobId, mapper.expectedRevision(ifMatch), request));
     return ResponseEntity.noContent().build();
   }
 
