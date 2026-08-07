@@ -10,7 +10,9 @@ public interface ExecutionRepository {
 
   enum Status {
     SCHEDULED,
-    SUPPRESSED
+    SUPPRESSED,
+    DELIVERED,
+    DELIVERY_FAILED
   }
 
   record ExecutionRecord(
