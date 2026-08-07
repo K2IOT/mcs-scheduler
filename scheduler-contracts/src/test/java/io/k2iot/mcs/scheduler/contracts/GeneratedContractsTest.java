@@ -8,16 +8,16 @@ import org.junit.jupiter.api.Test;
 
 class GeneratedContractsTest {
 
-    @Test
-    void cronTriggerRoundTripsThroughProtobuf() throws Exception {
-        TriggerSpec source =
-                TriggerSpec.newBuilder()
-                        .setCron(
-                                CronTrigger.newBuilder()
-                                        .setExpression("0 0 8 * * ?")
-                                        .setTimezone("Asia/Ho_Chi_Minh"))
-                        .build();
+  @Test
+  void cronTriggerRoundTripsThroughProtobuf() throws Exception {
+    TriggerSpec source =
+        TriggerSpec.newBuilder()
+            .setCron(
+                CronTrigger.newBuilder()
+                    .setExpression("0 0 8 * * ?")
+                    .setTimezone("Asia/Ho_Chi_Minh"))
+            .build();
 
-        assertThat(TriggerSpec.parseFrom(source.toByteArray())).isEqualTo(source);
-    }
+    assertThat(TriggerSpec.parseFrom(source.toByteArray())).isEqualTo(source);
+  }
 }
