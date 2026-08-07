@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package mcs.scheduler.v1;
+
+option java_multiple_files = true;
+option java_package = "io.k2iot.mcs.scheduler.v1";
+option java_outer_classname = "SchedulerQueryProto";
+
+import "google/protobuf/timestamp.proto";
+import "mcs/scheduler/v1/common.proto";
+import "mcs/scheduler/v1/scheduler_command.proto";
+
+service SchedulerQueryService {
+  rpc GetJob(GetJobRequest) returns (JobResponse);
+  rpc ListJobTriggers(ListJobTriggersRequest) returns (ListTriggersResponse);
+  rpc GetTrigger(GetTriggerRequest) returns (TriggerResponse);
+  rpc GetExecution(GetExecutionRequest) returns (ExecutionRecordResponse);
+  rpc ListExecutions(ListExecutionsRequest) returns (ListExecutionsResponse);
+}
+
+message GetJobRequest {
+  string namespace = 1;
+  string job_id = 2;
+}
+
+message ListJobTriggersRequest {
+  string namespace = 1;
+  string job_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListTriggersResponse {
+  repeated TriggerDefinition triggers = 1;
+  string next_page_token = 2;
+}
+
+message GetTriggerRequest {
+  string namespace = 1;
+  string trigger_id = 2;
+}
+
+message GetExecutionRequest {
+  string namespace = 1;
+  string execution_id = 2;
+}
+
+message ExecutionRecordResponse {
+  ExecutionRecord execution = 1;
+}
+
+message ListExecutionsRequest {
+  string namespace = 1;
+  string job_id = 2;
+  string trigger_id = 3;
+  google.protobuf.Timestamp from = 4;
+  google.protobuf.Timestamp to = 5;
+  ExecutionState state = 6;
+  int32 page_size = 7;
+  string page_token = 8;
+}
+
+message ListExecutionsResponse {
+  repeated ExecutionRecord executions = 1;
+  string next_page_token = 2;
+}
