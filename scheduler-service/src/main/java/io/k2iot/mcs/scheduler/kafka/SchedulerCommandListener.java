@@ -20,25 +20,26 @@ import tools.jackson.databind.json.JsonMapper;
 
 public class SchedulerCommandListener {
 
-  static final String COMMAND_RESULT_TOPIC = "mcs.scheduler.command-results.v1";
-
   private final InboxRepository inboxRepository;
   private final KafkaCommandMapper commandMapper;
   private final SchedulerCommandFacade commandFacade;
   private final JsonMapper jsonMapper;
   private final Clock clock;
+  private final String commandResultTopic;
 
   public SchedulerCommandListener(
       InboxRepository inboxRepository,
       KafkaCommandMapper commandMapper,
       SchedulerCommandFacade commandFacade,
       JsonMapper jsonMapper,
-      Clock clock) {
+      Clock clock,
+      String commandResultTopic) {
     this.inboxRepository = Objects.requireNonNull(inboxRepository, "inboxRepository");
     this.commandMapper = Objects.requireNonNull(commandMapper, "commandMapper");
     this.commandFacade = Objects.requireNonNull(commandFacade, "commandFacade");
     this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper");
     this.clock = Objects.requireNonNull(clock, "clock");
+    this.commandResultTopic = Objects.requireNonNull(commandResultTopic, "commandResultTopic");
   }
 
   @KafkaListener(
@@ -88,7 +89,7 @@ public class SchedulerCommandListener {
             mapped.namespace(),
             mapped.commandType(),
             resultPayload,
-            Map.of("topic", COMMAND_RESULT_TOPIC, "key", mapped.kafkaKey()),
+            Map.of("topic", commandResultTopic, "key", mapped.kafkaKey()),
             resultOccurredAt));
     inboxRepository.markCompleted(inboxId.orElseThrow(), clock.instant());
   }
