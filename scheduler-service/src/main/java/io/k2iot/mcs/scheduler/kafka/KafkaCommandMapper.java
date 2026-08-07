@@ -100,9 +100,7 @@ public class KafkaCommandMapper {
     long revision = positiveRevision(value.expectedRevision());
     SchedulerCommands.ReplaceTrigger command =
         restMapper.replaceTrigger(
-            requestId,
-            revision,
-            new RestModels.ReplaceTriggerRequest(producer, value.trigger()));
+            requestId, revision, new RestModels.ReplaceTriggerRequest(producer, value.trigger()));
     requireNamespace(namespace, command.trigger().namespace());
     return new MappedCommand(
         "REPLACE_TRIGGER", requestId, namespace, command.trigger().triggerId(), command);
@@ -160,7 +158,8 @@ public class KafkaCommandMapper {
                 namespace,
                 Objects.requireNonNull(value.triggerId(), "triggerId"),
                 Objects.requireNonNull(value.manualFireId(), "manualFireId")));
-    return new MappedCommand("FIRE_TRIGGER_NOW", requestId, namespace, command.triggerId(), command);
+    return new MappedCommand(
+        "FIRE_TRIGGER_NOW", requestId, namespace, command.triggerId(), command);
   }
 
   private static void requireNamespace(String envelopeNamespace, String commandNamespace) {
