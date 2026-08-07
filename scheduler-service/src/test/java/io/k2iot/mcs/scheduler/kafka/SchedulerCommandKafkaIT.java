@@ -50,7 +50,8 @@ class SchedulerCommandKafkaIT {
   private static final UUID REQUEST_ID = UUID.fromString("52000000-0000-4000-8000-000000000001");
   private static final UUID JOB_ID = UUID.fromString("53000000-0000-4000-8000-000000000001");
   private static final UUID TRIGGER_ID = UUID.fromString("54000000-0000-4000-8000-000000000001");
-  private static final UUID DESTINATION_ID = UUID.fromString("55000000-0000-4000-8000-000000000001");
+  private static final UUID DESTINATION_ID =
+      UUID.fromString("55000000-0000-4000-8000-000000000001");
 
   private static final PostgreSQLContainer<?> POSTGRES =
       new PostgreSQLContainer<>("postgres:16-alpine")
@@ -118,16 +119,15 @@ class SchedulerCommandKafkaIT {
   @Test
   void invalidCommandRollsBackInboxAndPublishesStableDeadLetterHeaders() throws Exception {
     Map<String, Object> consumerProperties =
-        KafkaTestUtils.consumerProps(embeddedKafka, "task-9-dlt-reader-" + UUID.randomUUID(), false);
+        KafkaTestUtils.consumerProps(
+            embeddedKafka, "task-9-dlt-reader-" + UUID.randomUUID(), false);
     DefaultKafkaConsumerFactory<String, String> consumerFactory =
         new DefaultKafkaConsumerFactory<>(
             consumerProperties, new StringDeserializer(), new StringDeserializer());
 
     try (Consumer<String, String> consumer = consumerFactory.createConsumer()) {
       embeddedKafka.consumeFromAnEmbeddedTopic(consumer, DLT_TOPIC);
-      kafkaTemplate
-          .send(COMMAND_TOPIC, "billing:" + REQUEST_ID, invalidCommandEnvelope())
-          .get();
+      kafkaTemplate.send(COMMAND_TOPIC, "billing:" + REQUEST_ID, invalidCommandEnvelope()).get();
 
       ConsumerRecord<String, String> deadLetter =
           KafkaTestUtils.getSingleRecord(consumer, DLT_TOPIC);
@@ -208,7 +208,8 @@ class SchedulerCommandKafkaIT {
         .formatted(MESSAGE_ID, REQUEST_ID);
   }
 
-  private void awaitCount(String table, int expected, Duration timeout) throws InterruptedException {
+  private void awaitCount(String table, int expected, Duration timeout)
+      throws InterruptedException {
     Instant deadline = Instant.now().plus(timeout);
     while (Instant.now().isBefore(deadline)) {
       if (count(table) == expected) {
