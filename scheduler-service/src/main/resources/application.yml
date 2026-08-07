@@ -14,6 +14,12 @@ spring:
     consumer:
       auto-offset-reset: earliest
       enable-auto-commit: false
+    producer:
+      acks: all
+      client-id: mcs-scheduler-${mcs.scheduler.instance-id}
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 120000
     listener:
       ack-mode: record
   quartz:
@@ -34,6 +40,7 @@ spring:
 
 mcs:
   scheduler:
+    instance-id: ${MCS_SCHEDULER_INSTANCE_ID:${HOSTNAME:local}}
     kafka:
       command-topic: ${MCS_SCHEDULER_KAFKA_COMMAND_TOPIC:mcs.scheduler.commands.v1}
       command-result-topic: ${MCS_SCHEDULER_KAFKA_COMMAND_RESULT_TOPIC:mcs.scheduler.command-results.v1}
@@ -43,6 +50,14 @@ mcs:
       replicas: ${MCS_SCHEDULER_KAFKA_REPLICAS:1}
       retry-backoff-ms: ${MCS_SCHEDULER_KAFKA_RETRY_BACKOFF_MS:250}
       retry-attempts: ${MCS_SCHEDULER_KAFKA_RETRY_ATTEMPTS:2}
+    outbox:
+      enabled: ${MCS_SCHEDULER_OUTBOX_ENABLED:true}
+      batch-size: ${MCS_SCHEDULER_OUTBOX_BATCH_SIZE:100}
+      poll-interval: ${MCS_SCHEDULER_OUTBOX_POLL_INTERVAL:1s}
+      claim-timeout: ${MCS_SCHEDULER_OUTBOX_CLAIM_TIMEOUT:30s}
+      publish-timeout: ${MCS_SCHEDULER_OUTBOX_PUBLISH_TIMEOUT:30s}
+      max-attempts: ${MCS_SCHEDULER_OUTBOX_MAX_ATTEMPTS:20}
+      max-age: ${MCS_SCHEDULER_OUTBOX_MAX_AGE:24h}
 
 management:
   endpoints:
