@@ -14,7 +14,8 @@ class KafkaCommandMapperTest {
   private static final UUID MESSAGE_ID = UUID.fromString("61000000-0000-4000-8000-000000000001");
   private static final UUID REQUEST_ID = UUID.fromString("62000000-0000-4000-8000-000000000001");
   private static final UUID JOB_ID = UUID.fromString("63000000-0000-4000-8000-000000000001");
-  private static final UUID DESTINATION_ID = UUID.fromString("64000000-0000-4000-8000-000000000001");
+  private static final UUID DESTINATION_ID =
+      UUID.fromString("64000000-0000-4000-8000-000000000001");
   private static final Instant OCCURRED_AT = Instant.parse("2026-08-07T04:00:00Z");
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
