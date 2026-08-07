@@ -137,10 +137,7 @@ class OutboxPublisherTest extends PostgresIntegrationTestBase {
   }
 
   private List<OutboxClaimRepository.ClaimedOutboxEvent> claimAfterBarrier(
-      OutboxClaimRepository repository,
-      CountDownLatch ready,
-      CountDownLatch start,
-      UUID claimId)
+      OutboxClaimRepository repository, CountDownLatch ready, CountDownLatch start, UUID claimId)
       throws InterruptedException {
     ready.countDown();
     if (!start.await(5, TimeUnit.SECONDS)) {
