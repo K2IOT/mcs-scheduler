@@ -70,7 +70,8 @@ public class ScheduledExecutionService {
         triggerRepository
             .findById(sourceTriggerId)
             .orElseThrow(
-                () -> new IllegalStateException("Trigger definition not found: " + sourceTriggerId));
+                () ->
+                    new IllegalStateException("Trigger definition not found: " + sourceTriggerId));
     DestinationDefinition destination =
         destinationRepository
             .findByIdAndVersion(job.destinationId(), job.destinationVersion())
@@ -88,7 +89,9 @@ public class ScheduledExecutionService {
             manualFireId,
             scheduledFireTime,
             actualFireTime,
-            suppressed ? ExecutionRepository.Status.SUPPRESSED : ExecutionRepository.Status.SCHEDULED,
+            suppressed
+                ? ExecutionRepository.Status.SUPPRESSED
+                : ExecutionRepository.Status.SCHEDULED,
             1,
             snapshot,
             now,
@@ -184,7 +187,8 @@ public class ScheduledExecutionService {
     try {
       return UUID.fromString(raw);
     } catch (IllegalArgumentException exception) {
-      throw new IllegalStateException("Invalid Quartz JobDataMap UUID for " + key + ": " + raw, exception);
+      throw new IllegalStateException(
+          "Invalid Quartz JobDataMap UUID for " + key + ": " + raw, exception);
     }
   }
 
