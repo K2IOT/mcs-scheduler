@@ -60,7 +60,8 @@ class SchedulerQueryGrpcServiceTest {
   @BeforeEach
   void setUp() {
     reset(jobRepository, triggerRepository);
-    stub = SchedulerQueryServiceGrpc.newBlockingStub(channelFactory.createChannel("localhost:9090"));
+    stub =
+        SchedulerQueryServiceGrpc.newBlockingStub(channelFactory.createChannel("localhost:9090"));
   }
 
   @Test
@@ -71,10 +72,7 @@ class SchedulerQueryGrpcServiceTest {
 
     var jobResponse =
         stub.getJob(
-            GetJobRequest.newBuilder()
-                .setNamespace("billing")
-                .setJobId(JOB_ID.toString())
-                .build());
+            GetJobRequest.newBuilder().setNamespace("billing").setJobId(JOB_ID.toString()).build());
     var triggerResponse =
         stub.getTrigger(
             GetTriggerRequest.newBuilder()

@@ -42,29 +42,25 @@ public final class SchedulerCommandGrpcService
   @Override
   public void createJob(CreateJobRequest request, StreamObserver<JobResponse> responseObserver) {
     respond(
-        responseObserver,
-        () -> mapper.jobResponse(facade.createJob(mapper.createJob(request))));
+        responseObserver, () -> mapper.jobResponse(facade.createJob(mapper.createJob(request))));
   }
 
   @Override
   public void updateJob(UpdateJobRequest request, StreamObserver<JobResponse> responseObserver) {
     respond(
-        responseObserver,
-        () -> mapper.jobResponse(facade.updateJob(mapper.updateJob(request))));
+        responseObserver, () -> mapper.jobResponse(facade.updateJob(mapper.updateJob(request))));
   }
 
   @Override
   public void pauseJob(JobMutationRequest request, StreamObserver<JobResponse> responseObserver) {
     respond(
-        responseObserver,
-        () -> mapper.jobResponse(facade.pauseJob(mapper.jobMutation(request))));
+        responseObserver, () -> mapper.jobResponse(facade.pauseJob(mapper.jobMutation(request))));
   }
 
   @Override
   public void resumeJob(JobMutationRequest request, StreamObserver<JobResponse> responseObserver) {
     respond(
-        responseObserver,
-        () -> mapper.jobResponse(facade.resumeJob(mapper.jobMutation(request))));
+        responseObserver, () -> mapper.jobResponse(facade.resumeJob(mapper.jobMutation(request))));
   }
 
   @Override

@@ -90,7 +90,8 @@ class SchedulerCommandGrpcServiceTest {
   @BeforeEach
   void setUp() {
     reset(facade);
-    stub = SchedulerCommandServiceGrpc.newBlockingStub(channelFactory.createChannel("localhost:9090"));
+    stub =
+        SchedulerCommandServiceGrpc.newBlockingStub(channelFactory.createChannel("localhost:9090"));
   }
 
   @Test
@@ -229,9 +230,7 @@ class SchedulerCommandGrpcServiceTest {
     assertThat(
             exception
                 .getTrailers()
-                .get(
-                    Metadata.Key.of(
-                        "scheduler-error-code", Metadata.ASCII_STRING_MARSHALLER)))
+                .get(Metadata.Key.of("scheduler-error-code", Metadata.ASCII_STRING_MARSHALLER)))
         .isEqualTo("REVISION_CONFLICT");
   }
 
@@ -322,8 +321,7 @@ class SchedulerCommandGrpcServiceTest {
         .setDescription("Daily invoice trigger")
         .setSpec(
             TriggerSpec.newBuilder()
-                .setCron(
-                    CronTrigger.newBuilder().setExpression("0 0 8 * * ?").setTimezone("UTC")))
+                .setCron(CronTrigger.newBuilder().setExpression("0 0 8 * * ?").setTimezone("UTC")))
         .setStartAt(timestamp(START_AT))
         .setPriority(5)
         .setMisfirePolicy(MISFIRE_POLICY_DO_NOTHING)

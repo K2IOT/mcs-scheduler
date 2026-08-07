@@ -48,7 +48,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.grpc.server.GlobalServerInterceptor;
@@ -77,9 +76,7 @@ public final class GrpcCommandMapper {
     return new ServerInterceptor() {
       @Override
       public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
-          ServerCall<ReqT, RespT> call,
-          Metadata headers,
-          ServerCallHandler<ReqT, RespT> next) {
+          ServerCall<ReqT, RespT> call, Metadata headers, ServerCallHandler<ReqT, RespT> next) {
         Context context = Context.current();
         String requestId = headers.get(REQUEST_ID_HEADER);
         String caller = headers.get(CALLER_HEADER);
@@ -185,7 +182,9 @@ public final class GrpcCommandMapper {
     Objects.requireNonNull(request, "request");
     String namespace = requireText(request.getNamespace(), "namespace");
     List<SchedulerCommands.TriggerDraft> triggers =
-        request.getTriggersList().stream().map(trigger -> triggerDraft(namespace, trigger)).toList();
+        request.getTriggersList().stream()
+            .map(trigger -> triggerDraft(namespace, trigger))
+            .toList();
     return new SchedulerCommands.CreateSchedule(
         requestId(request.getRequestId()),
         jobDraft(namespace, request.getJob()),
@@ -337,7 +336,8 @@ public final class GrpcCommandMapper {
         }
         yield new OnceTriggerSpec(instant(spec.getOnce().getFireAt()));
       }
-      case CRON -> new CronTriggerSpec(requireText(spec.getCron().getExpression(), "cron.expression"));
+      case CRON ->
+          new CronTriggerSpec(requireText(spec.getCron().getExpression(), "cron.expression"));
       case SIMPLE_INTERVAL ->
           new SimpleIntervalTriggerSpec(
               duration(spec.getSimpleInterval().getInterval()),
@@ -455,8 +455,7 @@ public final class GrpcCommandMapper {
     }
     if (value instanceof Map<?, ?> map) {
       Struct.Builder struct = Struct.newBuilder();
-      map.forEach(
-          (key, nested) -> struct.putFields(Objects.toString(key), toValue(nested)));
+      map.forEach((key, nested) -> struct.putFields(Objects.toString(key), toValue(nested)));
       return builder.setStructValue(struct).build();
     }
     if (value instanceof Iterable<?> iterable) {
@@ -605,7 +604,8 @@ public final class GrpcCommandMapper {
     };
   }
 
-  private static ChronoUnit toDomainDailyUnit(io.k2iot.mcs.scheduler.v1.DailyTimeIntervalUnit unit) {
+  private static ChronoUnit toDomainDailyUnit(
+      io.k2iot.mcs.scheduler.v1.DailyTimeIntervalUnit unit) {
     return switch (unit) {
       case DAILY_TIME_INTERVAL_UNIT_SECOND -> ChronoUnit.SECONDS;
       case DAILY_TIME_INTERVAL_UNIT_MINUTE -> ChronoUnit.MINUTES;
@@ -615,8 +615,7 @@ public final class GrpcCommandMapper {
     };
   }
 
-  private static io.k2iot.mcs.scheduler.v1.DailyTimeIntervalUnit toProtoDailyUnit(
-      ChronoUnit unit) {
+  private static io.k2iot.mcs.scheduler.v1.DailyTimeIntervalUnit toProtoDailyUnit(ChronoUnit unit) {
     return switch (unit) {
       case SECONDS ->
           io.k2iot.mcs.scheduler.v1.DailyTimeIntervalUnit.DAILY_TIME_INTERVAL_UNIT_SECOND;
