@@ -74,7 +74,8 @@ public final class LifecycleSchedulerCommandFacade extends SchedulerCommandFacad
   @Transactional
   public JobDefinition updateJob(SchedulerCommands.UpdateJob command) {
     boolean replay = isReplay(command.requestId());
-    JobDefinition before = replay ? null : jobRepository.findById(command.job().jobId()).orElse(null);
+    JobDefinition before =
+        replay ? null : jobRepository.findById(command.job().jobId()).orElse(null);
     JobDefinition result = super.updateJob(command);
     if (!replay) {
       auditJob(command.requestId(), "UPDATE_JOB", command.actor(), before, result, Map.of());
@@ -313,10 +314,7 @@ public final class LifecycleSchedulerCommandFacade extends SchedulerCommandFacad
   }
 
   private TriggerDefinition copyTrigger(
-      TriggerDefinition current,
-      TriggerDefinition.State state,
-      String actor,
-      Instant updatedAt) {
+      TriggerDefinition current, TriggerDefinition.State state, String actor, Instant updatedAt) {
     return new TriggerDefinition(
         current.triggerId(),
         current.jobId(),

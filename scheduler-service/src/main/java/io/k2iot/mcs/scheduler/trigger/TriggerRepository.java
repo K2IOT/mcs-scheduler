@@ -13,8 +13,7 @@ public interface TriggerRepository {
 
   List<TriggerDefinition> findPausedByJobId(UUID jobId, PauseReason pauseReason);
 
-  List<TriggerDefinition> findPage(
-      String namespace, Instant createdAfter, UUID idAfter, int limit);
+  List<TriggerDefinition> findPage(String namespace, Instant createdAfter, UUID idAfter, int limit);
 
   List<TriggerDefinition> findByJobIdPage(
       UUID jobId, Instant createdAfter, UUID idAfter, int limit);

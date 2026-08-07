@@ -52,13 +52,18 @@ class PauseLifecycleIT extends PostgresIntegrationTestBase {
   void resumeJobOnlyResumesTriggersPausedByThatJob() {
     facade.createSchedule(
         new SchedulerCommands.CreateSchedule(
-            request("0001"), jobDraft(), List.of(trigger(MANUAL_TRIGGER_ID), trigger(JOB_TRIGGER_ID)), "alice"));
+            request("0001"),
+            jobDraft(),
+            List.of(trigger(MANUAL_TRIGGER_ID), trigger(JOB_TRIGGER_ID)),
+            "alice"));
 
     facade.pauseTrigger(
         new SchedulerCommands.TriggerMutation(
             request("0002"), MANUAL_TRIGGER_ID, "billing", 1, "alice"));
-    facade.pauseJob(new SchedulerCommands.JobMutation(request("0003"), JOB_ID, "billing", 1, "alice"));
-    facade.resumeJob(new SchedulerCommands.JobMutation(request("0004"), JOB_ID, "billing", 2, "alice"));
+    facade.pauseJob(
+        new SchedulerCommands.JobMutation(request("0003"), JOB_ID, "billing", 1, "alice"));
+    facade.resumeJob(
+        new SchedulerCommands.JobMutation(request("0004"), JOB_ID, "billing", 2, "alice"));
 
     assertThat(triggerState(MANUAL_TRIGGER_ID))
         .containsEntry("state", "PAUSED")
@@ -72,12 +77,17 @@ class PauseLifecycleIT extends PostgresIntegrationTestBase {
   void mutationsWriteSafeAuditMetadataInTheSameLifecycle() {
     facade.createSchedule(
         new SchedulerCommands.CreateSchedule(
-            request("0011"), jobDraft(), List.of(trigger(MANUAL_TRIGGER_ID), trigger(JOB_TRIGGER_ID)), "alice"));
+            request("0011"),
+            jobDraft(),
+            List.of(trigger(MANUAL_TRIGGER_ID), trigger(JOB_TRIGGER_ID)),
+            "alice"));
     facade.pauseTrigger(
         new SchedulerCommands.TriggerMutation(
             request("0012"), MANUAL_TRIGGER_ID, "billing", 1, "alice"));
-    facade.pauseJob(new SchedulerCommands.JobMutation(request("0013"), JOB_ID, "billing", 1, "alice"));
-    facade.resumeJob(new SchedulerCommands.JobMutation(request("0014"), JOB_ID, "billing", 2, "alice"));
+    facade.pauseJob(
+        new SchedulerCommands.JobMutation(request("0013"), JOB_ID, "billing", 1, "alice"));
+    facade.resumeJob(
+        new SchedulerCommands.JobMutation(request("0014"), JOB_ID, "billing", 2, "alice"));
 
     List<Map<String, Object>> audit =
         jdbc.queryForList(
@@ -89,15 +99,18 @@ class PauseLifecycleIT extends PostgresIntegrationTestBase {
 
     assertThat(audit).isNotEmpty();
     assertThat(audit).extracting(row -> row.get("actor")).containsOnly("alice");
-    assertThat(audit).extracting(row -> row.get("action"))
+    assertThat(audit)
+        .extracting(row -> row.get("action"))
         .contains("CREATE_JOB", "CREATE_TRIGGER", "PAUSE_TRIGGER", "PAUSE_JOB", "RESUME_JOB");
     assertThat(audit).allSatisfy(row -> assertThat(row.get("correlation_id")).isNotNull());
-    assertThat(audit).allSatisfy(row -> assertThat((String) row.get("payload")).doesNotContain("invoiceId"));
+    assertThat(audit)
+        .allSatisfy(row -> assertThat((String) row.get("payload")).doesNotContain("invoiceId"));
   }
 
   private Map<String, Object> triggerState(UUID triggerId) {
     return jdbc.queryForMap(
-        "select state, pause_reason from scheduler.trigger_definition where trigger_id = ?", triggerId);
+        "select state, pause_reason from scheduler.trigger_definition where trigger_id = ?",
+        triggerId);
   }
 
   private SchedulerCommands.JobDraft jobDraft() {

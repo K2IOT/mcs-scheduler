@@ -39,7 +39,8 @@ public final class JobQueryService {
     List<JobDefinition> rows =
         repository.findPage(requiredNamespace, cursor.createdAt(), cursor.id(), pageSize + 1);
     boolean hasMore = rows.size() > pageSize;
-    List<JobDefinition> items = hasMore ? List.copyOf(rows.subList(0, pageSize)) : List.copyOf(rows);
+    List<JobDefinition> items =
+        hasMore ? List.copyOf(rows.subList(0, pageSize)) : List.copyOf(rows);
     String nextPageToken =
         hasMore && !items.isEmpty()
             ? encode(items.get(items.size() - 1).createdAt(), items.get(items.size() - 1).jobId())
@@ -76,8 +77,7 @@ public final class JobQueryService {
       return new Cursor(null, null);
     }
     try {
-      String decoded =
-          new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
+      String decoded = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
       String[] parts = decoded.split("\\|", -1);
       if (parts.length != 2) {
         throw new IllegalArgumentException("pageToken is invalid");

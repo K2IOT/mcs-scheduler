@@ -35,8 +35,7 @@ public class SchedulerObservabilityAutoConfiguration {
       TriggerRepository triggerRepository,
       SchedulerProjectionPort projection,
       SchedulerMetrics metrics) {
-    return new QuartzReconciler(
-        scheduler, jobRepository, triggerRepository, projection, metrics);
+    return new QuartzReconciler(scheduler, jobRepository, triggerRepository, projection, metrics);
   }
 
   @Bean(name = "schedulerHealthIndicator")

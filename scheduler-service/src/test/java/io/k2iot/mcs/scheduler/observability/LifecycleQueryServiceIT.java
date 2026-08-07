@@ -61,7 +61,8 @@ class LifecycleQueryServiceIT extends PostgresIntegrationTestBase {
     assertThat(first.nextPageToken()).isNotBlank();
     assertThat(second.items()).hasSize(5);
     assertThat(second.nextPageToken()).isNull();
-    assertThat(first.items()).extracting(JobDefinition::jobId)
+    assertThat(first.items())
+        .extracting(JobDefinition::jobId)
         .doesNotContainAnyElementsOf(second.items().stream().map(JobDefinition::jobId).toList());
   }
 
@@ -82,7 +83,8 @@ class LifecycleQueryServiceIT extends PostgresIntegrationTestBase {
         triggerQueryService.listByJob(job.jobId(), "billing", 2, triggerPage.nextPageToken());
 
     assertThat(triggerPage.items()).hasSize(2);
-    assertThat(triggerTail.items()).extracting(TriggerDefinition::triggerId)
+    assertThat(triggerTail.items())
+        .extracting(TriggerDefinition::triggerId)
         .containsExactly(thirdTrigger.triggerId());
 
     executionRepository.insertIfAbsent(execution(job.jobId(), firstTrigger.triggerId(), 1));

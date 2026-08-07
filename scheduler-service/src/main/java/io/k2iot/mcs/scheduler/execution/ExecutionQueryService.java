@@ -95,8 +95,7 @@ public final class ExecutionQueryService {
       return new Cursor(null, null);
     }
     try {
-      String decoded =
-          new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
+      String decoded = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
       String[] parts = decoded.split("\\|", -1);
       if (parts.length != 2) {
         throw new IllegalArgumentException("pageToken is invalid");
@@ -110,8 +109,7 @@ public final class ExecutionQueryService {
 
   private record Cursor(Instant scheduledFireTime, UUID id) {}
 
-  public record Page(
-      List<ExecutionRepository.ExecutionRecord> items, String nextPageToken) {
+  public record Page(List<ExecutionRepository.ExecutionRecord> items, String nextPageToken) {
     public Page {
       items = List.copyOf(items);
     }

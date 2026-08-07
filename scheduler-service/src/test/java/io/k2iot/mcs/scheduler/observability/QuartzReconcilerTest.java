@@ -30,8 +30,7 @@ class QuartzReconcilerTest {
 
   private static final Instant NOW = Instant.parse("2026-08-07T14:00:00Z");
   private static final UUID JOB_ID = UUID.fromString("20ba9c0b-5a71-4cf8-8191-1b4ae337d101");
-  private static final UUID TRIGGER_ID =
-      UUID.fromString("30a8a8dc-43c5-433e-a6cc-12efc0f5d102");
+  private static final UUID TRIGGER_ID = UUID.fromString("30a8a8dc-43c5-433e-a6cc-12efc0f5d102");
   private static final UUID DESTINATION_ID =
       UUID.fromString("59ee8102-5302-49df-9cb7-88fd46388d03");
 

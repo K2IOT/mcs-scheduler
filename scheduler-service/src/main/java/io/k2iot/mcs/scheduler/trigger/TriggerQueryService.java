@@ -47,8 +47,7 @@ public final class TriggerQueryService {
     return toPage(rows, pageSize);
   }
 
-  public Page listByJob(
-      UUID jobId, String namespace, int requestedPageSize, String pageToken) {
+  public Page listByJob(UUID jobId, String namespace, int requestedPageSize, String pageToken) {
     Objects.requireNonNull(jobId, "jobId");
     String requiredNamespace = requireNamespace(namespace);
     JobDefinition job =
@@ -72,8 +71,7 @@ public final class TriggerQueryService {
     String nextPageToken =
         hasMore && !items.isEmpty()
             ? encode(
-                items.get(items.size() - 1).createdAt(),
-                items.get(items.size() - 1).triggerId())
+                items.get(items.size() - 1).createdAt(), items.get(items.size() - 1).triggerId())
             : null;
     return new Page(items, nextPageToken);
   }
@@ -107,8 +105,7 @@ public final class TriggerQueryService {
       return new Cursor(null, null);
     }
     try {
-      String decoded =
-          new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
+      String decoded = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
       String[] parts = decoded.split("\\|", -1);
       if (parts.length != 2) {
         throw new IllegalArgumentException("pageToken is invalid");
