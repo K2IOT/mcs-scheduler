@@ -33,8 +33,7 @@ class ScheduledExecutionIdempotencyIT extends PostgresIntegrationTestBase {
   private static final Instant FIRE_TIME = Instant.parse("2026-08-07T11:00:00Z");
   private static final Instant ACTUAL_FIRE_TIME = Instant.parse("2026-08-07T11:00:01Z");
   private static final UUID JOB_ID = UUID.fromString("71000000-0000-4000-8000-000000000001");
-  private static final UUID TRIGGER_ID =
-      UUID.fromString("72000000-0000-4000-8000-000000000001");
+  private static final UUID TRIGGER_ID = UUID.fromString("72000000-0000-4000-8000-000000000001");
   private static final UUID DESTINATION_ID =
       UUID.fromString("73000000-0000-4000-8000-000000000001");
 
