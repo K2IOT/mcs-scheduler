@@ -8,6 +8,7 @@ import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.quartz.JobBuilder;
 import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
@@ -18,11 +19,16 @@ import org.quartz.Trigger;
 
 public final class QuartzSchedulerProjection implements SchedulerProjectionPort {
 
-  private final Scheduler scheduler;
+  private final Supplier<Scheduler> schedulerSupplier;
   private final QuartzTriggerMapper triggerMapper;
 
   public QuartzSchedulerProjection(Scheduler scheduler, QuartzTriggerMapper triggerMapper) {
-    this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+    this(() -> Objects.requireNonNull(scheduler, "scheduler"), triggerMapper);
+  }
+
+  public QuartzSchedulerProjection(
+      Supplier<Scheduler> schedulerSupplier, QuartzTriggerMapper triggerMapper) {
+    this.schedulerSupplier = Objects.requireNonNull(schedulerSupplier, "schedulerSupplier");
     this.triggerMapper = Objects.requireNonNull(triggerMapper, "triggerMapper");
   }
 
@@ -30,36 +36,36 @@ public final class QuartzSchedulerProjection implements SchedulerProjectionPort 
   public void createJob(JobDefinition definition) {
     execute(
         "create job " + definition.jobId(),
-        () -> scheduler.addJob(toJobDetail(definition), false, true));
+        () -> scheduler().addJob(toJobDetail(definition), false, true));
   }
 
   @Override
   public void updateJob(JobDefinition definition) {
     execute(
         "update job " + definition.jobId(),
-        () -> scheduler.addJob(toJobDetail(definition), true, true));
+        () -> scheduler().addJob(toJobDetail(definition), true, true));
   }
 
   @Override
   public void pauseJob(JobDefinition definition) {
-    execute("pause job " + definition.jobId(), () -> scheduler.pauseJob(jobKey(definition)));
+    execute("pause job " + definition.jobId(), () -> scheduler().pauseJob(jobKey(definition)));
   }
 
   @Override
   public void resumeJob(JobDefinition definition) {
-    execute("resume job " + definition.jobId(), () -> scheduler.resumeJob(jobKey(definition)));
+    execute("resume job " + definition.jobId(), () -> scheduler().resumeJob(jobKey(definition)));
   }
 
   @Override
   public void deleteJob(JobDefinition definition) {
-    execute("delete job " + definition.jobId(), () -> scheduler.deleteJob(jobKey(definition)));
+    execute("delete job " + definition.jobId(), () -> scheduler().deleteJob(jobKey(definition)));
   }
 
   @Override
   public void createTrigger(TriggerDefinition definition) {
     execute(
         "create trigger " + definition.triggerId(),
-        () -> scheduler.scheduleJob(toTrigger(definition)));
+        () -> scheduler().scheduleJob(toTrigger(definition)));
   }
 
   @Override
@@ -67,9 +73,10 @@ public final class QuartzSchedulerProjection implements SchedulerProjectionPort 
     execute(
         "replace trigger " + definition.triggerId(),
         () -> {
-          if (scheduler.rescheduleJob(
-                  QuartzKeys.trigger(definition.triggerId(), definition.namespace()),
-                  toTrigger(definition))
+          if (scheduler()
+                  .rescheduleJob(
+                      QuartzKeys.trigger(definition.triggerId(), definition.namespace()),
+                      toTrigger(definition))
               == null) {
             throw new SchedulerException("Quartz trigger does not exist");
           }
@@ -80,21 +87,27 @@ public final class QuartzSchedulerProjection implements SchedulerProjectionPort 
   public void pauseTrigger(TriggerDefinition definition) {
     execute(
         "pause trigger " + definition.triggerId(),
-        () -> scheduler.pauseTrigger(QuartzKeys.trigger(definition.triggerId(), definition.namespace())));
+        () ->
+            scheduler()
+                .pauseTrigger(QuartzKeys.trigger(definition.triggerId(), definition.namespace())));
   }
 
   @Override
   public void resumeTrigger(TriggerDefinition definition) {
     execute(
         "resume trigger " + definition.triggerId(),
-        () -> scheduler.resumeTrigger(QuartzKeys.trigger(definition.triggerId(), definition.namespace())));
+        () ->
+            scheduler()
+                .resumeTrigger(QuartzKeys.trigger(definition.triggerId(), definition.namespace())));
   }
 
   @Override
   public void deleteTrigger(TriggerDefinition definition) {
     execute(
         "delete trigger " + definition.triggerId(),
-        () -> scheduler.unscheduleJob(QuartzKeys.trigger(definition.triggerId(), definition.namespace())));
+        () ->
+            scheduler()
+                .unscheduleJob(QuartzKeys.trigger(definition.triggerId(), definition.namespace())));
   }
 
   @Override
@@ -106,7 +119,9 @@ public final class QuartzSchedulerProjection implements SchedulerProjectionPort 
                 QuartzKeys.MANUAL_FIRE_ID, manualFireId.toString()));
     execute(
         "fire trigger now " + definition.triggerId(),
-        () -> scheduler.triggerJob(QuartzKeys.job(definition.jobId(), definition.namespace()), data));
+        () ->
+            scheduler()
+                .triggerJob(QuartzKeys.job(definition.jobId(), definition.namespace()), data));
   }
 
   private JobDetail toJobDetail(JobDefinition definition) {
@@ -137,6 +152,10 @@ public final class QuartzSchedulerProjection implements SchedulerProjectionPort 
   private Trigger toTrigger(TriggerDefinition definition) {
     return triggerMapper.toQuartz(
         definition, QuartzKeys.job(definition.jobId(), definition.namespace()));
+  }
+
+  private Scheduler scheduler() {
+    return Objects.requireNonNull(schedulerSupplier.get(), "schedulerSupplier returned null");
   }
 
   private static JobKey jobKey(JobDefinition definition) {
