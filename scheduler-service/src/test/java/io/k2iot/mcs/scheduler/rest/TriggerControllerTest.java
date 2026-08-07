@@ -42,8 +42,7 @@ class TriggerControllerTest {
   void mapsStaleRevisionToPreconditionFailed() throws Exception {
     when(facade.replaceTrigger(any()))
         .thenThrow(
-            new SchedulerCommandException(
-                "REVISION_CONFLICT", "Expected revision 7 but found 8"));
+            new SchedulerCommandException("REVISION_CONFLICT", "Expected revision 7 but found 8"));
 
     mockMvc
         .perform(
