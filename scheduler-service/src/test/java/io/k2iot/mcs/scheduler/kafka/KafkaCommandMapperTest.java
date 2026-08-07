@@ -25,7 +25,8 @@ class KafkaCommandMapperTest {
   @Test
   void rejectsUnsupportedSchemaVersion() {
     KafkaCommandMapper.KafkaCommandException failure =
-        failure(envelope(2, MESSAGE_ID.toString(), "UNKNOWN_COMMAND", jsonMapper.createObjectNode()));
+        failure(
+            envelope(2, MESSAGE_ID.toString(), "UNKNOWN_COMMAND", jsonMapper.createObjectNode()));
 
     assertThat(failure.code()).isEqualTo("UNSUPPORTED_SCHEMA_VERSION");
   }
@@ -42,8 +43,7 @@ class KafkaCommandMapperTest {
   void rejectsUnknownCommandType() {
     KafkaCommandMapper.KafkaCommandException failure =
         failure(
-            envelope(
-                1, MESSAGE_ID.toString(), "UNKNOWN_COMMAND", jsonMapper.createObjectNode()));
+            envelope(1, MESSAGE_ID.toString(), "UNKNOWN_COMMAND", jsonMapper.createObjectNode()));
 
     assertThat(failure.code()).isEqualTo("UNKNOWN_COMMAND_TYPE");
   }
