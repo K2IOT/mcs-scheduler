@@ -187,7 +187,7 @@ class QuartzTriggerMapperTest {
     assertThat(trigger.getDescription()).isEqualTo("renewal trigger");
     assertThat(trigger.getPriority()).isEqualTo(7);
     assertThat(trigger.getStartTime()).isEqualTo(Date.from(NOW.plusSeconds(30)));
-    assertThat(trigger.getEndTime()).isEqualTo(Date.from(NOW.plusDays(30)));
+    assertThat(trigger.getEndTime()).isEqualTo(Date.from(NOW.plus(30, ChronoUnit.DAYS)));
     assertThat(trigger.getCalendarName()).isEqualTo("vietnam-holidays");
   }
 
@@ -218,7 +218,7 @@ class QuartzTriggerMapperTest {
         "renewal trigger",
         spec,
         NOW.plusSeconds(30),
-        NOW.plusDays(30),
+        NOW.plus(30, ChronoUnit.DAYS),
         7,
         timezone,
         misfirePolicy,
