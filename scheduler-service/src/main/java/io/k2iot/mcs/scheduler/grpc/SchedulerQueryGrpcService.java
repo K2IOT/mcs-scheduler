@@ -17,11 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Service;
 
-@Service
-@ConditionalOnBean({JobRepository.class, TriggerRepository.class})
 public final class SchedulerQueryGrpcService
     extends SchedulerQueryServiceGrpc.SchedulerQueryServiceImplBase {
 
