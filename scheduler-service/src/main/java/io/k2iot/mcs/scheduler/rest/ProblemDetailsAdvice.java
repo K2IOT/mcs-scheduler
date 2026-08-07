@@ -61,21 +61,21 @@ public final class ProblemDetailsAdvice {
       case "IDEMPOTENCY_CONFLICT", "COMMAND_IN_PROGRESS", "COMMAND_PREVIOUSLY_FAILED" ->
           HttpStatus.CONFLICT;
       case "DESTINATION_DISABLED",
-          "NAMESPACE_MISMATCH",
-          "RESOURCE_DELETED",
-          "TRIGGER_JOB_MISMATCH" -> HttpStatus.UNPROCESSABLE_ENTITY;
+              "NAMESPACE_MISMATCH",
+              "RESOURCE_DELETED",
+              "TRIGGER_JOB_MISMATCH" ->
+          HttpStatus.UNPROCESSABLE_ENTITY;
       default -> HttpStatus.BAD_REQUEST;
     };
   }
 
   private static ResponseEntity<ProblemDetail> problem(
       HttpStatus status, String code, String detail) {
-    ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail == null ? code : detail);
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(status, detail == null ? code : detail);
     problem.setTitle("Scheduler request failed");
     problem.setType(
-        URI.create(
-            "urn:mcs:scheduler:error:"
-                + code.toLowerCase(Locale.ROOT).replace('_', '-')));
+        URI.create("urn:mcs:scheduler:error:" + code.toLowerCase(Locale.ROOT).replace('_', '-')));
     problem.setProperty("code", code);
     return ResponseEntity.status(status).body(problem);
   }
