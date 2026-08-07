@@ -66,7 +66,8 @@ public class OutboxPublisher {
         continue;
       }
       try {
-        kafka.send(recordFor(event))
+        kafka
+            .send(recordFor(event))
             .get(properties.getPublishTimeout().toMillis(), TimeUnit.MILLISECONDS);
         repository.markPublished(event.eventId(), event.claimId(), clock.instant());
       } catch (InterruptedException exception) {
@@ -79,8 +80,7 @@ public class OutboxPublisher {
     }
   }
 
-  private ProducerRecord<Object, Object> recordFor(
-      OutboxClaimRepository.ClaimedOutboxEvent event) {
+  private ProducerRecord<Object, Object> recordFor(OutboxClaimRepository.ClaimedOutboxEvent event) {
     String topic = requiredHeader(event, "topic");
     String defaultKey = event.headers().getOrDefault("key", event.aggregateId().toString());
     String key = resolveKeyExpression(event, defaultKey);
@@ -120,8 +120,7 @@ public class OutboxPublisher {
   private void handleFailure(
       OutboxClaimRepository.ClaimedOutboxEvent event, Throwable throwable, Instant failedAt) {
     String error = failureMessage(throwable);
-    if (event.publishAttempts() >= properties.getMaxAttempts()
-        || isExpired(event, failedAt)) {
+    if (event.publishAttempts() >= properties.getMaxAttempts() || isExpired(event, failedAt)) {
       markDead(event, failedAt, error);
       return;
     }
