@@ -13,6 +13,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.config.TopicBuilder;
@@ -27,6 +28,7 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfiguration(
     after = SchedulerCommandAutoConfiguration.class,
     afterName = "org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration")
+@ConditionalOnBean(KafkaOperations.class)
 public class KafkaTopicConfiguration {
 
   static final String MESSAGE_ID_HEADER = "mcs.scheduler.messageId";
