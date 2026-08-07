@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+package mcs.scheduler.v1;
+
+option java_multiple_files = true;
+option java_package = "io.k2iot.mcs.scheduler.v1";
+option java_outer_classname = "SchedulerCommonProto";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+enum ConcurrencyPolicy {
+  CONCURRENCY_POLICY_UNSPECIFIED = 0;
+  CONCURRENCY_POLICY_ALLOW = 1;
+  CONCURRENCY_POLICY_DISALLOW = 2;
+}
+
+enum RecoveryPolicy {
+  RECOVERY_POLICY_UNSPECIFIED = 0;
+  RECOVERY_POLICY_NONE = 1;
+  RECOVERY_POLICY_REQUEST_RECOVERY = 2;
+}
+
+enum JobState {
+  JOB_STATE_UNSPECIFIED = 0;
+  JOB_STATE_ACTIVE = 1;
+  JOB_STATE_PAUSED = 2;
+  JOB_STATE_DISABLED = 3;
+  JOB_STATE_DELETED = 4;
+}
+
+enum TriggerState {
+  TRIGGER_STATE_UNSPECIFIED = 0;
+  TRIGGER_STATE_ACTIVE = 1;
+  TRIGGER_STATE_PAUSED = 2;
+  TRIGGER_STATE_DISABLED = 3;
+  TRIGGER_STATE_DELETED = 4;
+  TRIGGER_STATE_COMPLETE = 5;
+}
+
+enum MisfirePolicy {
+  MISFIRE_POLICY_UNSPECIFIED = 0;
+  MISFIRE_POLICY_SMART_POLICY = 1;
+  MISFIRE_POLICY_IGNORE_MISFIRES = 2;
+  MISFIRE_POLICY_FIRE_NOW = 3;
+  MISFIRE_POLICY_FIRE_ONCE_NOW = 4;
+  MISFIRE_POLICY_DO_NOTHING = 5;
+  MISFIRE_POLICY_RESCHEDULE_NOW_WITH_EXISTING_REPEAT_COUNT = 6;
+  MISFIRE_POLICY_RESCHEDULE_NOW_WITH_REMAINING_REPEAT_COUNT = 7;
+  MISFIRE_POLICY_RESCHEDULE_NEXT_WITH_REMAINING_COUNT = 8;
+  MISFIRE_POLICY_RESCHEDULE_NEXT_WITH_EXISTING_COUNT = 9;
+}
+
+enum CalendarIntervalUnit {
+  CALENDAR_INTERVAL_UNIT_UNSPECIFIED = 0;
+  CALENDAR_INTERVAL_UNIT_DAY = 1;
+  CALENDAR_INTERVAL_UNIT_WEEK = 2;
+  CALENDAR_INTERVAL_UNIT_MONTH = 3;
+  CALENDAR_INTERVAL_UNIT_YEAR = 4;
+}
+
+enum DailyTimeIntervalUnit {
+  DAILY_TIME_INTERVAL_UNIT_UNSPECIFIED = 0;
+  DAILY_TIME_INTERVAL_UNIT_SECOND = 1;
+  DAILY_TIME_INTERVAL_UNIT_MINUTE = 2;
+  DAILY_TIME_INTERVAL_UNIT_HOUR = 3;
+}
+
+enum DayOfWeek {
+  DAY_OF_WEEK_UNSPECIFIED = 0;
+  DAY_OF_WEEK_MONDAY = 1;
+  DAY_OF_WEEK_TUESDAY = 2;
+  DAY_OF_WEEK_WEDNESDAY = 3;
+  DAY_OF_WEEK_THURSDAY = 4;
+  DAY_OF_WEEK_FRIDAY = 5;
+  DAY_OF_WEEK_SATURDAY = 6;
+  DAY_OF_WEEK_SUNDAY = 7;
+}
+
+enum ExecutionState {
+  EXECUTION_STATE_UNSPECIFIED = 0;
+  EXECUTION_STATE_PENDING_DELIVERY = 1;
+  EXECUTION_STATE_DELIVERED = 2;
+  EXECUTION_STATE_DELIVERY_FAILED = 3;
+  EXECUTION_STATE_SUPPRESSED = 4;
+}
+
+message LocalTime {
+  int32 hour = 1;
+  int32 minute = 2;
+  int32 second = 3;
+  int32 nano = 4;
+}
+
+message JobDraft {
+  string job_id = 1;
+  string name = 2;
+  string description = 3;
+  string destination_id = 4;
+  int64 destination_version = 5;
+  string event_type = 6;
+  google.protobuf.Struct payload = 7;
+  map<string, string> headers = 8;
+  ConcurrencyPolicy concurrency_policy = 9;
+  RecoveryPolicy recovery_policy = 10;
+  optional bool durable = 11;
+}
+
+message JobDefinition {
+  string job_id = 1;
+  string namespace = 2;
+  string name = 3;
+  string description = 4;
+  string destination_id = 5;
+  int64 destination_version = 6;
+  string event_type = 7;
+  google.protobuf.Struct payload = 8;
+  map<string, string> headers = 9;
+  ConcurrencyPolicy concurrency_policy = 10;
+  RecoveryPolicy recovery_policy = 11;
+  bool durable = 12;
+  JobState state = 13;
+  int64 revision = 14;
+  google.protobuf.Timestamp created_at = 15;
+  string created_by = 16;
+  google.protobuf.Timestamp updated_at = 17;
+  string updated_by = 18;
+}
+
+message OnceTrigger {
+  google.protobuf.Timestamp fire_at = 1;
+}
+
+message CronTrigger {
+  string expression = 1;
+  string timezone = 2;
+}
+
+message SimpleIntervalTrigger {
+  google.protobuf.Duration interval = 1;
+  optional int64 repeat_count = 2;
+}
+
+message CalendarIntervalTrigger {
+  int32 interval = 1;
+  CalendarIntervalUnit unit = 2;
+  string timezone = 3;
+}
+
+message DailyTimeIntervalTrigger {
+  int32 interval = 1;
+  DailyTimeIntervalUnit unit = 2;
+  repeated DayOfWeek days_of_week = 3;
+  LocalTime start_time = 4;
+  LocalTime end_time = 5;
+  string timezone = 6;
+}
+
+message TriggerSpec {
+  oneof kind {
+    OnceTrigger once = 1;
+    CronTrigger cron = 2;
+    SimpleIntervalTrigger simple_interval = 3;
+    CalendarIntervalTrigger calendar_interval = 4;
+    DailyTimeIntervalTrigger daily_time_interval = 5;
+  }
+}
+
+message TriggerDraft {
+  string trigger_id = 1;
+  string job_id = 2;
+  string name = 3;
+  string description = 4;
+  TriggerSpec spec = 5;
+  google.protobuf.Timestamp start_at = 6;
+  google.protobuf.Timestamp end_at = 7;
+  optional int32 priority = 8;
+  MisfirePolicy misfire_policy = 9;
+  repeated string calendar_names = 10;
+}
+
+message TriggerDefinition {
+  string trigger_id = 1;
+  string job_id = 2;
+  string namespace = 3;
+  string name = 4;
+  string description = 5;
+  TriggerSpec spec = 6;
+  google.protobuf.Timestamp start_at = 7;
+  google.protobuf.Timestamp end_at = 8;
+  int32 priority = 9;
+  MisfirePolicy misfire_policy = 10;
+  repeated string calendar_names = 11;
+  TriggerState state = 12;
+  int64 revision = 13;
+  google.protobuf.Timestamp created_at = 14;
+  string created_by = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  string updated_by = 17;
+}
+
+message ExecutionRecord {
+  string execution_id = 1;
+  string job_id = 2;
+  string trigger_id = 3;
+  string namespace = 4;
+  int64 job_revision = 5;
+  int64 trigger_revision = 6;
+  google.protobuf.Timestamp scheduled_fire_time = 7;
+  google.protobuf.Timestamp actual_fire_time = 8;
+  google.protobuf.Timestamp previous_fire_time = 9;
+  google.protobuf.Timestamp next_fire_time = 10;
+  bool recovery = 11;
+  ExecutionState state = 12;
+  string event_type = 13;
+  google.protobuf.Struct payload = 14;
+  map<string, string> headers = 15;
+  int32 delivery_attempts = 16;
+  string last_error = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+  string manual_fire_id = 20;
+}
