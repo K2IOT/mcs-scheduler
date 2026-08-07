@@ -46,9 +46,11 @@ public class KafkaTopicConfiguration {
       KafkaCommandMapper commandMapper,
       SchedulerCommandFacade commandFacade,
       JsonMapper jsonMapper,
-      Clock clock) {
+      Clock clock,
+      @Value("${mcs.scheduler.kafka.command-result-topic:mcs.scheduler.command-results.v1}")
+          String commandResultTopic) {
     return new SchedulerCommandListener(
-        inboxRepository, commandMapper, commandFacade, jsonMapper, clock);
+        inboxRepository, commandMapper, commandFacade, jsonMapper, clock, commandResultTopic);
   }
 
   @Bean
