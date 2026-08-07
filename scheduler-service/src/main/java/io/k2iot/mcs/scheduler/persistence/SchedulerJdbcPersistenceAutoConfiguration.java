@@ -8,7 +8,9 @@ import io.k2iot.mcs.scheduler.execution.ExecutionRepository;
 import io.k2iot.mcs.scheduler.execution.JdbcExecutionRepository;
 import io.k2iot.mcs.scheduler.job.JdbcJobRepository;
 import io.k2iot.mcs.scheduler.job.JobRepository;
+import io.k2iot.mcs.scheduler.outbox.JdbcOutboxClaimRepository;
 import io.k2iot.mcs.scheduler.outbox.JdbcOutboxRepository;
+import io.k2iot.mcs.scheduler.outbox.OutboxClaimRepository;
 import io.k2iot.mcs.scheduler.outbox.OutboxRepository;
 import io.k2iot.mcs.scheduler.trigger.JdbcTriggerRepository;
 import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
@@ -60,5 +62,11 @@ public class SchedulerJdbcPersistenceAutoConfiguration {
   @ConditionalOnMissingBean(OutboxRepository.class)
   OutboxRepository outboxRepository(JdbcClient jdbcClient, JsonMapper jsonMapper) {
     return new JdbcOutboxRepository(jdbcClient, jsonMapper);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(OutboxClaimRepository.class)
+  OutboxClaimRepository outboxClaimRepository(JdbcClient jdbcClient, JsonMapper jsonMapper) {
+    return new JdbcOutboxClaimRepository(jdbcClient, jsonMapper);
   }
 }
