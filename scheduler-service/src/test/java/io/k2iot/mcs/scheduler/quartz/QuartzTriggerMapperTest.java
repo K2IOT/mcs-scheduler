@@ -125,7 +125,7 @@ class QuartzTriggerMapperTest {
   }
 
   @Test
-  void mapsDailyIntervalWeekdaysAndDailyWindow() {
+  void mapsDailyIntervalWeekdaysAndDailyWindowWhenTimezoneMatchesJvmRules() {
     Trigger trigger =
         mapper.toQuartz(
             definition(
@@ -135,7 +135,7 @@ class QuartzTriggerMapperTest {
                     Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY),
                     LocalTime.of(8, 30),
                     LocalTime.of(18, 15)),
-                "Asia/Ho_Chi_Minh",
+                "UTC",
                 TriggerDefinition.MisfirePolicy.FIRE_ONCE_NOW,
                 Set.of()),
             JOB_KEY);
@@ -149,6 +149,26 @@ class QuartzTriggerMapperTest {
     assertThat(daily.getEndTimeOfDay()).isEqualTo(new TimeOfDay(18, 15, 0));
     assertThat(daily.getMisfireInstruction())
         .isEqualTo(DailyTimeIntervalTrigger.MISFIRE_INSTRUCTION_FIRE_ONCE_NOW);
+  }
+
+  @Test
+  void rejectsDailyTimezoneThatQuartzCannotRepresentPerTrigger() {
+    TriggerDefinition definition =
+        definition(
+            new DailyTimeIntervalTriggerSpec(
+                15,
+                ChronoUnit.MINUTES,
+                Set.of(DayOfWeek.MONDAY),
+                LocalTime.of(8, 30),
+                LocalTime.of(18, 15)),
+            "Asia/Ho_Chi_Minh",
+            TriggerDefinition.MisfirePolicy.DO_NOTHING,
+            Set.of());
+
+    assertThatThrownBy(() -> mapper.toQuartz(definition, JOB_KEY))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("DailyTimeIntervalTrigger")
+        .hasMessageContaining("timezone");
   }
 
   @Test
