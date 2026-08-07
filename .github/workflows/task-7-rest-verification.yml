@@ -36,23 +36,5 @@ jobs:
       - name: Check Java formatting
         run: ./mvnw -B spotless:check
 
-      - name: Capture Spotless formatting
-        if: failure()
-        run: |
-          ./mvnw -B spotless:apply
-          for file in \
-            scheduler-service/src/test/java/io/k2iot/mcs/scheduler/rest/TriggerControllerTest.java \
-            scheduler-service/src/main/java/io/k2iot/mcs/scheduler/rest/ProblemDetailsAdvice.java \
-            scheduler-service/src/main/java/io/k2iot/mcs/scheduler/rest/TriggerController.java \
-            scheduler-service/src/main/java/io/k2iot/mcs/scheduler/rest/JobController.java \
-            scheduler-service/src/main/java/io/k2iot/mcs/scheduler/rest/RestModels.java \
-            scheduler-service/src/main/java/io/k2iot/mcs/scheduler/rest/RestCommandMapper.java \
-            scheduler-service/src/main/java/io/k2iot/mcs/scheduler/rest/ScheduleController.java
-          do
-            echo "::group::$file"
-            cat "$file"
-            echo "::endgroup::"
-          done
-
       - name: Run full Maven verification
         run: ./mvnw -B verify
