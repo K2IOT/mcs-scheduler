@@ -50,10 +50,8 @@ class OutboxPublisherKafkaIT {
   private static final UUID DESTINATION_ID =
       UUID.fromString("81000000-0000-4000-8000-000000000001");
   private static final UUID JOB_ID = UUID.fromString("82000000-0000-4000-8000-000000000001");
-  private static final UUID TRIGGER_ID =
-      UUID.fromString("83000000-0000-4000-8000-000000000001");
-  private static final UUID EXECUTION_ID =
-      UUID.fromString("84000000-0000-4000-8000-000000000001");
+  private static final UUID TRIGGER_ID = UUID.fromString("83000000-0000-4000-8000-000000000001");
+  private static final UUID EXECUTION_ID = UUID.fromString("84000000-0000-4000-8000-000000000001");
 
   private static final PostgreSQLContainer<?> POSTGRES =
       new PostgreSQLContainer<>("postgres:16-alpine")
