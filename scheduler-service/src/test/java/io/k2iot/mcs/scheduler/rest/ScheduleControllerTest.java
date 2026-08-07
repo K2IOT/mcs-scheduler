@@ -105,8 +105,7 @@ class ScheduleControllerTest {
   void mapsUnknownDestinationToNotFound() throws Exception {
     when(facade.createSchedule(any()))
         .thenThrow(
-            new SchedulerCommandException(
-                "DESTINATION_NOT_FOUND", "Destination does not exist"));
+            new SchedulerCommandException("DESTINATION_NOT_FOUND", "Destination does not exist"));
 
     mockMvc
         .perform(
