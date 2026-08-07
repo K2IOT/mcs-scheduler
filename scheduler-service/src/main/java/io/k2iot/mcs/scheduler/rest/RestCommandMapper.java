@@ -13,9 +13,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
+@Component
 public final class RestCommandMapper {
 
   static final int MAX_PAYLOAD_BYTES = 64 * 1024;
