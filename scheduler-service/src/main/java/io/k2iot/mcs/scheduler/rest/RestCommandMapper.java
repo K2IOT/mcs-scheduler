@@ -99,17 +99,11 @@ public final class RestCommandMapper {
     List<SchedulerCommands.TriggerDraft> triggers =
         triggerRequests.stream().map(this::toTriggerDraft).toList();
     return new SchedulerCommands.CreateSchedule(
-        requestId,
-        toJobDraft(request.job()),
-        triggers,
-        requireText(request.caller(), "caller"));
+        requestId, toJobDraft(request.job()), triggers, requireText(request.caller(), "caller"));
   }
 
   public SchedulerCommands.JobMutation jobMutation(
-      UUID requestId,
-      UUID jobId,
-      long expectedRevision,
-      RestModels.MutationRequest request) {
+      UUID requestId, UUID jobId, long expectedRevision, RestModels.MutationRequest request) {
     Objects.requireNonNull(request, "request");
     return new SchedulerCommands.JobMutation(
         requestId,
@@ -120,10 +114,7 @@ public final class RestCommandMapper {
   }
 
   public SchedulerCommands.TriggerMutation triggerMutation(
-      UUID requestId,
-      UUID triggerId,
-      long expectedRevision,
-      RestModels.MutationRequest request) {
+      UUID requestId, UUID triggerId, long expectedRevision, RestModels.MutationRequest request) {
     Objects.requireNonNull(request, "request");
     return new SchedulerCommands.TriggerMutation(
         requestId,
@@ -205,11 +196,7 @@ public final class RestCommandMapper {
     }
     if (request instanceof RestModels.DailyTimeIntervalTriggerRequest daily) {
       return new DailyTimeIntervalTriggerSpec(
-          daily.interval(),
-          daily.unit(),
-          daily.daysOfWeek(),
-          daily.startTime(),
-          daily.endTime());
+          daily.interval(), daily.unit(), daily.daysOfWeek(), daily.startTime(), daily.endTime());
     }
     throw new RestContractException("INVALID_TRIGGER_TYPE", "Unsupported trigger type");
   }
@@ -217,8 +204,7 @@ public final class RestCommandMapper {
   private void validatePayload(Map<String, Object> payload) {
     try {
       if (jsonMapper.writeValueAsBytes(payload).length > MAX_PAYLOAD_BYTES) {
-        throw new RestContractException(
-            "PAYLOAD_TOO_LARGE", "Job payload must not exceed 64 KiB");
+        throw new RestContractException("PAYLOAD_TOO_LARGE", "Job payload must not exceed 64 KiB");
       }
     } catch (JacksonException exception) {
       throw new RestContractException(
