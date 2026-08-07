@@ -154,7 +154,7 @@ class SchedulerQueryGrpcServiceTest {
   }
 
   @EnableAutoConfiguration
-  @Import({SchedulerQueryGrpcService.class, GrpcCommandMapper.class, GrpcErrorMapper.class})
+  @Import({GrpcCommandMapper.class, GrpcErrorMapper.class})
   static class TestConfig {
 
     @Bean
@@ -165,6 +165,15 @@ class SchedulerQueryGrpcServiceTest {
     @Bean
     TriggerRepository triggerRepository() {
       return mock(TriggerRepository.class);
+    }
+
+    @Bean
+    SchedulerQueryGrpcService schedulerQueryGrpcService(
+        JobRepository jobRepository,
+        TriggerRepository triggerRepository,
+        GrpcCommandMapper mapper,
+        GrpcErrorMapper errorMapper) {
+      return new SchedulerQueryGrpcService(jobRepository, triggerRepository, mapper, errorMapper);
     }
   }
 }
