@@ -11,7 +11,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(
-    after = {SchedulerJdbcPersistenceAutoConfiguration.class, SchedulerCommandAutoConfiguration.class})
+    after = {
+      SchedulerJdbcPersistenceAutoConfiguration.class,
+      SchedulerCommandAutoConfiguration.class
+    })
 public class SchedulerGrpcAutoConfiguration {
 
   @Bean
