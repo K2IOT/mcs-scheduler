@@ -1,6 +1,6 @@
 # MCS Scheduler Service Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans (recommended) to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a clustered PostgreSQL-backed Quartz scheduling service that exposes equivalent REST, gRPC, and Kafka command interfaces and durably emits scheduled business events through Kafka.
 
