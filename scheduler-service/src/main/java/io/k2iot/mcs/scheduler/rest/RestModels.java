@@ -40,9 +40,7 @@ public final class RestModels {
     @JsonSubTypes.Type(value = CronTriggerRequest.class, name = "CRON"),
     @JsonSubTypes.Type(value = SimpleIntervalTriggerRequest.class, name = "SIMPLE_INTERVAL"),
     @JsonSubTypes.Type(value = CalendarIntervalTriggerRequest.class, name = "CALENDAR_INTERVAL"),
-    @JsonSubTypes.Type(
-        value = DailyTimeIntervalTriggerRequest.class,
-        name = "DAILY_TIME_INTERVAL")
+    @JsonSubTypes.Type(value = DailyTimeIntervalTriggerRequest.class, name = "DAILY_TIME_INTERVAL")
   })
   public sealed interface TriggerRequest
       permits OnceTriggerRequest,
