@@ -34,8 +34,7 @@ class OutboxPublisherTest extends PostgresIntegrationTestBase {
 
   private static final Instant NOW = Instant.parse("2026-08-07T12:00:00Z");
   private static final UUID EVENT_ID = UUID.fromString("71000000-0000-4000-8000-000000000001");
-  private static final UUID AGGREGATE_ID =
-      UUID.fromString("72000000-0000-4000-8000-000000000001");
+  private static final UUID AGGREGATE_ID = UUID.fromString("72000000-0000-4000-8000-000000000001");
 
   @Autowired JdbcTemplate jdbc;
   @Autowired JdbcClient jdbcClient;
@@ -61,11 +60,9 @@ class OutboxPublisherTest extends PostgresIntegrationTestBase {
 
     try {
       var first =
-          executor.submit(
-              () -> claimAfterBarrier(repository, ready, start, UUID.randomUUID()));
+          executor.submit(() -> claimAfterBarrier(repository, ready, start, UUID.randomUUID()));
       var second =
-          executor.submit(
-              () -> claimAfterBarrier(repository, ready, start, UUID.randomUUID()));
+          executor.submit(() -> claimAfterBarrier(repository, ready, start, UUID.randomUUID()));
       assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
       start.countDown();
 
@@ -75,7 +72,8 @@ class OutboxPublisherTest extends PostgresIntegrationTestBase {
                   second.get(10, TimeUnit.SECONDS).stream())
               .toList();
 
-      assertThat(claimed).extracting(OutboxClaimRepository.ClaimedOutboxEvent::eventId)
+      assertThat(claimed)
+          .extracting(OutboxClaimRepository.ClaimedOutboxEvent::eventId)
           .containsExactly(EVENT_ID);
       assertThat(
               jdbc.queryForObject(
@@ -103,11 +101,7 @@ class OutboxPublisherTest extends PostgresIntegrationTestBase {
     var metrics = new SimpleMeterRegistry();
     var publisher =
         new OutboxPublisher(
-            repository,
-            kafka,
-            properties,
-            Clock.fixed(NOW, ZoneOffset.UTC),
-            metrics);
+            repository, kafka, properties, Clock.fixed(NOW, ZoneOffset.UTC), metrics);
 
     publisher.publishOnce();
 
@@ -131,11 +125,7 @@ class OutboxPublisherTest extends PostgresIntegrationTestBase {
     var metrics = new SimpleMeterRegistry();
     var publisher =
         new OutboxPublisher(
-            repository,
-            kafka,
-            properties,
-            Clock.fixed(NOW, ZoneOffset.UTC),
-            metrics);
+            repository, kafka, properties, Clock.fixed(NOW, ZoneOffset.UTC), metrics);
 
     publisher.publishOnce();
 
