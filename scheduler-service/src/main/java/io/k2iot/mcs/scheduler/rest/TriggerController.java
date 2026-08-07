@@ -44,7 +44,8 @@ public final class TriggerController {
       @RequestHeader("Idempotency-Key") String idempotencyKey,
       @RequestHeader("If-Match") String ifMatch,
       @RequestBody RestModels.ReplaceTriggerRequest request) {
-    mapper.requireResourceId(triggerId, request.trigger() == null ? null : request.trigger().triggerId());
+    mapper.requireResourceId(
+        triggerId, request.trigger() == null ? null : request.trigger().triggerId());
     TriggerDefinition trigger =
         facade.replaceTrigger(
             mapper.replaceTrigger(
