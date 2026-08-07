@@ -327,7 +327,8 @@ class SchedulerCommandKafkaIT {
     Instant deadline = Instant.now().plus(timeout);
     while (Instant.now().isBefore(deadline)) {
       for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(200))) {
-        if (messageId.toString()
+        if (messageId
+            .toString()
             .equals(headerTextOrNull(record, KafkaTopicConfiguration.MESSAGE_ID_HEADER))) {
           return record;
         }
@@ -376,8 +377,7 @@ class SchedulerCommandKafkaIT {
     return new String(header.value(), StandardCharsets.UTF_8);
   }
 
-  private static String headerTextOrNull(
-      ConsumerRecord<String, String> record, String headerName) {
+  private static String headerTextOrNull(ConsumerRecord<String, String> record, String headerName) {
     Header header = record.headers().lastHeader(headerName);
     return header == null ? null : new String(header.value(), StandardCharsets.UTF_8);
   }
@@ -430,7 +430,8 @@ class SchedulerCommandKafkaIT {
     }
 
     @Override
-    public SchedulerCommands.ScheduleResult createSchedule(SchedulerCommands.CreateSchedule command) {
+    public SchedulerCommands.ScheduleResult createSchedule(
+        SchedulerCommands.CreateSchedule command) {
       attempts.incrementAndGet();
       if (failuresRemaining.getAndUpdate(current -> Math.max(0, current - 1)) > 0) {
         throw new IllegalStateException("simulated transient scheduler command failure");
