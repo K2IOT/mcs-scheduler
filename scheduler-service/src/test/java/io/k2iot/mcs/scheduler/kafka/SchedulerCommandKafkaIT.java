@@ -1,14 +1,24 @@
 package io.k2iot.mcs.scheduler.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import io.k2iot.mcs.scheduler.SchedulerApplication;
+import io.k2iot.mcs.scheduler.command.CommandRequestRepository;
+import io.k2iot.mcs.scheduler.command.SchedulerCommandFacade;
+import io.k2iot.mcs.scheduler.command.SchedulerCommands;
+import io.k2iot.mcs.scheduler.command.SchedulerProjectionPort;
+import io.k2iot.mcs.scheduler.destination.DestinationRepository;
+import io.k2iot.mcs.scheduler.job.JobRepository;
+import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
@@ -18,6 +28,10 @@ import org.junit.jupiter.api.Test;
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -28,6 +42,7 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(
     classes = SchedulerApplication.class,
@@ -37,11 +52,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
       "spring.kafka.consumer.auto-offset-reset=earliest",
       "spring.kafka.consumer.enable-auto-commit=false",
       "mcs.scheduler.kafka.consumer-group=task-9-kafka-it",
-      "mcs.scheduler.kafka.command-result-topic=mcs.scheduler.command-results.test.v1"
+      "mcs.scheduler.kafka.command-result-topic=mcs.scheduler.command-results.test.v1",
+      "mcs.scheduler.kafka.retry-backoff-ms=10",
+      "mcs.scheduler.kafka.retry-attempts=2"
     })
 @EmbeddedKafka(
     partitions = 1,
     topics = {"mcs.scheduler.commands.v1", "mcs.scheduler.commands.v1.DLT"})
+@Import(SchedulerCommandKafkaIT.FlakyFacadeConfiguration.class)
 class SchedulerCommandKafkaIT {
 
   private static final String COMMAND_TOPIC = "mcs.scheduler.commands.v1";
@@ -54,6 +72,24 @@ class SchedulerCommandKafkaIT {
   private static final UUID TRIGGER_ID = UUID.fromString("54000000-0000-4000-8000-000000000001");
   private static final UUID DESTINATION_ID =
       UUID.fromString("55000000-0000-4000-8000-000000000001");
+
+  private static final UUID RETRY_SUCCESS_MESSAGE_ID =
+      UUID.fromString("56000000-0000-4000-8000-000000000001");
+  private static final UUID RETRY_SUCCESS_REQUEST_ID =
+      UUID.fromString("57000000-0000-4000-8000-000000000001");
+  private static final UUID RETRY_SUCCESS_JOB_ID =
+      UUID.fromString("58000000-0000-4000-8000-000000000001");
+  private static final UUID RETRY_SUCCESS_TRIGGER_ID =
+      UUID.fromString("59000000-0000-4000-8000-000000000001");
+
+  private static final UUID RETRY_EXHAUSTED_MESSAGE_ID =
+      UUID.fromString("61000000-0000-4000-8000-000000000001");
+  private static final UUID RETRY_EXHAUSTED_REQUEST_ID =
+      UUID.fromString("62000000-0000-4000-8000-000000000001");
+  private static final UUID RETRY_EXHAUSTED_JOB_ID =
+      UUID.fromString("63000000-0000-4000-8000-000000000001");
+  private static final UUID RETRY_EXHAUSTED_TRIGGER_ID =
+      UUID.fromString("64000000-0000-4000-8000-000000000001");
 
   private static final PostgreSQLContainer<?> POSTGRES =
       new PostgreSQLContainer<>("postgres:16-alpine")
@@ -77,9 +113,11 @@ class SchedulerCommandKafkaIT {
   @Autowired KafkaTemplate<String, String> kafkaTemplate;
   @Autowired EmbeddedKafkaBroker embeddedKafka;
   @Autowired Scheduler scheduler;
+  @Autowired FlakySchedulerCommandFacade flakyCommandFacade;
 
   @BeforeEach
   void cleanState() throws Exception {
+    flakyCommandFacade.reset();
     scheduler.clear();
     jdbc.update("delete from scheduler.outbox_event");
     jdbc.update("delete from scheduler.inbox_message");
@@ -123,20 +161,75 @@ class SchedulerCommandKafkaIT {
   }
 
   @Test
-  void invalidCommandRollsBackInboxAndPublishesStableDeadLetterHeaders() throws Exception {
-    Map<String, Object> consumerProperties =
-        KafkaTestUtils.consumerProps(
-            embeddedKafka, "task-9-dlt-reader-" + UUID.randomUUID(), false);
-    DefaultKafkaConsumerFactory<String, String> consumerFactory =
-        new DefaultKafkaConsumerFactory<>(
-            consumerProperties, new StringDeserializer(), new StringDeserializer());
+  void transientFailureRetriesThenSucceedsWithoutDuplicateSideEffects() throws Exception {
+    flakyCommandFacade.failNext(2);
+    String command =
+        createScheduleEnvelope(
+            RETRY_SUCCESS_MESSAGE_ID,
+            RETRY_SUCCESS_REQUEST_ID,
+            RETRY_SUCCESS_JOB_ID,
+            RETRY_SUCCESS_TRIGGER_ID);
 
-    try (Consumer<String, String> consumer = consumerFactory.createConsumer()) {
+    try (Consumer<String, String> consumer = dltConsumer()) {
+      embeddedKafka.consumeFromAnEmbeddedTopic(consumer, DLT_TOPIC);
+      kafkaTemplate.send(COMMAND_TOPIC, "billing:" + RETRY_SUCCESS_JOB_ID, command).get();
+
+      awaitCount("scheduler.outbox_event", 1, Duration.ofSeconds(15));
+
+      assertThat(flakyCommandFacade.attempts()).isEqualTo(3);
+      assertThat(count("scheduler.inbox_message")).isEqualTo(1);
+      assertThat(count("scheduler.command_request")).isEqualTo(1);
+      assertThat(count("scheduler.job_definition")).isEqualTo(1);
+      assertThat(count("scheduler.trigger_definition")).isEqualTo(1);
+      assertThat(count("scheduler.outbox_event")).isEqualTo(1);
+      assertNoDltForMessage(consumer, RETRY_SUCCESS_MESSAGE_ID, Duration.ofSeconds(1));
+    }
+  }
+
+  @Test
+  void transientFailureExhaustsRetriesAndPublishesExactlyOneDltRecord() throws Exception {
+    flakyCommandFacade.failNext(3);
+    String command =
+        createScheduleEnvelope(
+            RETRY_EXHAUSTED_MESSAGE_ID,
+            RETRY_EXHAUSTED_REQUEST_ID,
+            RETRY_EXHAUSTED_JOB_ID,
+            RETRY_EXHAUSTED_TRIGGER_ID);
+
+    try (Consumer<String, String> consumer = dltConsumer()) {
+      embeddedKafka.consumeFromAnEmbeddedTopic(consumer, DLT_TOPIC);
+      kafkaTemplate.send(COMMAND_TOPIC, "billing:" + RETRY_EXHAUSTED_JOB_ID, command).get();
+
+      ConsumerRecord<String, String> deadLetter =
+          awaitDlt(consumer, RETRY_EXHAUSTED_MESSAGE_ID, Duration.ofSeconds(15));
+
+      assertThat(flakyCommandFacade.attempts()).isEqualTo(3);
+      assertThat(headerText(deadLetter, KafkaTopicConfiguration.MESSAGE_ID_HEADER))
+          .isEqualTo(RETRY_EXHAUSTED_MESSAGE_ID.toString());
+      assertThat(headerText(deadLetter, KafkaTopicConfiguration.REQUEST_ID_HEADER))
+          .isEqualTo(RETRY_EXHAUSTED_REQUEST_ID.toString());
+      assertThat(headerText(deadLetter, KafkaTopicConfiguration.ERROR_CODE_HEADER))
+          .isEqualTo("KAFKA_COMMAND_FAILED");
+      assertThat(deadLetter.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_TOPIC)).isNotNull();
+      assertThat(deadLetter.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_PARTITION)).isNotNull();
+      assertThat(deadLetter.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_OFFSET)).isNotNull();
+      assertThat(count("scheduler.inbox_message")).isZero();
+      assertThat(count("scheduler.command_request")).isZero();
+      assertThat(count("scheduler.job_definition")).isZero();
+      assertThat(count("scheduler.trigger_definition")).isZero();
+      assertThat(count("scheduler.outbox_event")).isZero();
+      assertNoAdditionalDltForMessage(consumer, RETRY_EXHAUSTED_MESSAGE_ID, Duration.ofSeconds(1));
+    }
+  }
+
+  @Test
+  void invalidCommandRollsBackInboxAndPublishesStableDeadLetterHeaders() throws Exception {
+    try (Consumer<String, String> consumer = dltConsumer()) {
       embeddedKafka.consumeFromAnEmbeddedTopic(consumer, DLT_TOPIC);
       kafkaTemplate.send(COMMAND_TOPIC, "billing:" + REQUEST_ID, invalidCommandEnvelope()).get();
 
       ConsumerRecord<String, String> deadLetter =
-          KafkaTestUtils.getSingleRecord(consumer, DLT_TOPIC);
+          awaitDlt(consumer, MESSAGE_ID, Duration.ofSeconds(15));
 
       assertThat(headerText(deadLetter, KafkaTopicConfiguration.MESSAGE_ID_HEADER))
           .isEqualTo(MESSAGE_ID.toString());
@@ -152,6 +245,11 @@ class SchedulerCommandKafkaIT {
   }
 
   private String createScheduleEnvelope() {
+    return createScheduleEnvelope(MESSAGE_ID, REQUEST_ID, JOB_ID, TRIGGER_ID);
+  }
+
+  private String createScheduleEnvelope(
+      UUID messageId, UUID requestId, UUID jobId, UUID triggerId) {
     return """
         {
           "schemaVersion": 1,
@@ -195,7 +293,7 @@ class SchedulerCommandKafkaIT {
           }
         }
         """
-        .formatted(MESSAGE_ID, REQUEST_ID, JOB_ID, DESTINATION_ID, TRIGGER_ID, JOB_ID);
+        .formatted(messageId, requestId, jobId, DESTINATION_ID, triggerId, jobId);
   }
 
   private String invalidCommandEnvelope() {
@@ -212,6 +310,47 @@ class SchedulerCommandKafkaIT {
         }
         """
         .formatted(MESSAGE_ID, REQUEST_ID);
+  }
+
+  private Consumer<String, String> dltConsumer() {
+    Map<String, Object> consumerProperties =
+        KafkaTestUtils.consumerProps(
+            embeddedKafka, "task-9-dlt-reader-" + UUID.randomUUID(), false);
+    DefaultKafkaConsumerFactory<String, String> consumerFactory =
+        new DefaultKafkaConsumerFactory<>(
+            consumerProperties, new StringDeserializer(), new StringDeserializer());
+    return consumerFactory.createConsumer();
+  }
+
+  private ConsumerRecord<String, String> awaitDlt(
+      Consumer<String, String> consumer, UUID messageId, Duration timeout) {
+    Instant deadline = Instant.now().plus(timeout);
+    while (Instant.now().isBefore(deadline)) {
+      for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(200))) {
+        if (messageId.toString()
+            .equals(headerTextOrNull(record, KafkaTopicConfiguration.MESSAGE_ID_HEADER))) {
+          return record;
+        }
+      }
+    }
+    fail("Timed out waiting for DLT message " + messageId);
+    throw new AssertionError("unreachable");
+  }
+
+  private void assertNoDltForMessage(
+      Consumer<String, String> consumer, UUID messageId, Duration duration) {
+    Instant deadline = Instant.now().plus(duration);
+    while (Instant.now().isBefore(deadline)) {
+      for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(100))) {
+        assertThat(headerTextOrNull(record, KafkaTopicConfiguration.MESSAGE_ID_HEADER))
+            .isNotEqualTo(messageId.toString());
+      }
+    }
+  }
+
+  private void assertNoAdditionalDltForMessage(
+      Consumer<String, String> consumer, UUID messageId, Duration duration) {
+    assertNoDltForMessage(consumer, messageId, duration);
   }
 
   private void awaitCount(String table, int expected, Duration timeout)
@@ -235,5 +374,82 @@ class SchedulerCommandKafkaIT {
     Header header = record.headers().lastHeader(headerName);
     assertThat(header).as(headerName).isNotNull();
     return new String(header.value(), StandardCharsets.UTF_8);
+  }
+
+  private static String headerTextOrNull(
+      ConsumerRecord<String, String> record, String headerName) {
+    Header header = record.headers().lastHeader(headerName);
+    return header == null ? null : new String(header.value(), StandardCharsets.UTF_8);
+  }
+
+  @TestConfiguration(proxyBeanMethods = false)
+  static class FlakyFacadeConfiguration {
+
+    @Bean
+    @Primary
+    FlakySchedulerCommandFacade flakySchedulerCommandFacade(
+        JobRepository jobRepository,
+        TriggerRepository triggerRepository,
+        DestinationRepository destinationRepository,
+        CommandRequestRepository commandRequestRepository,
+        SchedulerProjectionPort schedulerProjection,
+        JsonMapper jsonMapper,
+        Clock clock) {
+      return new FlakySchedulerCommandFacade(
+          jobRepository,
+          triggerRepository,
+          destinationRepository,
+          commandRequestRepository,
+          schedulerProjection,
+          jsonMapper,
+          clock);
+    }
+  }
+
+  static class FlakySchedulerCommandFacade extends SchedulerCommandFacade {
+
+    private final AtomicInteger attempts = new AtomicInteger();
+    private final AtomicInteger failuresRemaining = new AtomicInteger();
+
+    FlakySchedulerCommandFacade(
+        JobRepository jobRepository,
+        TriggerRepository triggerRepository,
+        DestinationRepository destinationRepository,
+        CommandRequestRepository commandRequestRepository,
+        SchedulerProjectionPort schedulerProjection,
+        JsonMapper jsonMapper,
+        Clock clock) {
+      super(
+          jobRepository,
+          triggerRepository,
+          destinationRepository,
+          commandRequestRepository,
+          schedulerProjection,
+          jsonMapper,
+          clock);
+    }
+
+    @Override
+    public SchedulerCommands.ScheduleResult createSchedule(SchedulerCommands.CreateSchedule command) {
+      attempts.incrementAndGet();
+      if (failuresRemaining.getAndUpdate(current -> Math.max(0, current - 1)) > 0) {
+        throw new IllegalStateException("simulated transient scheduler command failure");
+      }
+      return super.createSchedule(command);
+    }
+
+    void failNext(int failures) {
+      attempts.set(0);
+      failuresRemaining.set(failures);
+    }
+
+    int attempts() {
+      return attempts.get();
+    }
+
+    void reset() {
+      attempts.set(0);
+      failuresRemaining.set(0);
+    }
   }
 }
