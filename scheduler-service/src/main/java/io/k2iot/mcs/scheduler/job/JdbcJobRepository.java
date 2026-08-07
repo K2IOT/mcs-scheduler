@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,17 +29,34 @@ public class JdbcJobRepository implements JobRepository {
 
   @Override
   public Optional<JobDefinition> findById(UUID jobId) {
-    return jdbc.sql(
-            """
-            select job_id, namespace, name, description, destination_id, destination_version,
-                   event_type, payload, headers, concurrency_policy, recovery_policy, durable,
-                   state, revision, created_at, created_by, updated_at, updated_by
-            from scheduler.job_definition
-            where job_id = :jobId
-            """)
+    return jdbc.sql(baseSelect() + " where job_id = :jobId")
         .param("jobId", jobId)
         .query(this::mapJob)
         .optional();
+  }
+
+  @Override
+  public List<JobDefinition> findPage(
+      String namespace, Instant createdAfter, UUID idAfter, int limit) {
+    String cursor =
+        createdAfter == null
+            ? ""
+            : " and (created_at > :createdAfter or (created_at = :createdAfter and job_id > :idAfter))";
+    JdbcClient.StatementSpec statement =
+        jdbc.sql(
+                baseSelect()
+                    + " where namespace = :namespace and state <> 'DELETED'"
+                    + cursor
+                    + " order by created_at, job_id limit :limit")
+            .param("namespace", namespace)
+            .param("limit", limit);
+    if (createdAfter != null) {
+      statement =
+          statement
+              .param("createdAfter", postgresTimestamp(createdAfter))
+              .param("idAfter", idAfter);
+    }
+    return statement.query(this::mapJob).list();
   }
 
   @Override
@@ -125,6 +143,15 @@ public class JdbcJobRepository implements JobRepository {
             .param("expectedRevision", expectedRevision)
             .update();
     return updated == 1;
+  }
+
+  private String baseSelect() {
+    return """
+        select job_id, namespace, name, description, destination_id, destination_version,
+               event_type, payload, headers, concurrency_policy, recovery_policy, durable,
+               state, revision, created_at, created_by, updated_at, updated_by
+        from scheduler.job_definition
+        """;
   }
 
   private JobDefinition mapJob(ResultSet resultSet, int rowNumber) throws SQLException {
