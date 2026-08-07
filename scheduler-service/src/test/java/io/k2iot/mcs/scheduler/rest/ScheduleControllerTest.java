@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import io.k2iot.mcs.scheduler.command.SchedulerCommandException;
 import io.k2iot.mcs.scheduler.command.SchedulerCommandFacade;
 import io.k2iot.mcs.scheduler.command.SchedulerCommands;
 import io.k2iot.mcs.scheduler.job.ConcurrencyPolicy;
@@ -98,6 +99,23 @@ class ScheduleControllerTest {
         .andExpect(jsonPath("$.code").value("PAYLOAD_TOO_LARGE"));
 
     verifyNoInteractions(facade);
+  }
+
+  @Test
+  void mapsUnknownDestinationToNotFound() throws Exception {
+    when(facade.createSchedule(any()))
+        .thenThrow(
+            new SchedulerCommandException(
+                "DESTINATION_NOT_FOUND", "Destination does not exist"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/schedules")
+                .header("Idempotency-Key", REQUEST_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(validCreateScheduleJson("INV-1")))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("DESTINATION_NOT_FOUND"));
   }
 
   private static String validCreateScheduleJson(String invoiceId) {
