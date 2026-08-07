@@ -37,7 +37,8 @@ public final class QuartzTriggerMapper {
       throw new IllegalArgumentException("Quartz job key must match trigger jobId and namespace");
     }
     if (definition.calendarNames().size() > 1) {
-      throw new IllegalArgumentException("Quartz triggers can reference at most one Quartz calendar");
+      throw new IllegalArgumentException(
+          "Quartz triggers can reference at most one Quartz calendar");
     }
 
     if (definition.spec() instanceof OnceTriggerSpec once) {
@@ -78,7 +79,8 @@ public final class QuartzTriggerMapper {
   private Trigger mapSimple(
       TriggerDefinition definition, JobKey jobKey, SimpleIntervalTriggerSpec specification) {
     SimpleScheduleBuilder schedule =
-        SimpleScheduleBuilder.simpleSchedule().withIntervalInMilliseconds(specification.interval().toMillis());
+        SimpleScheduleBuilder.simpleSchedule()
+            .withIntervalInMilliseconds(specification.interval().toMillis());
     if (specification.repeatCount() == null) {
       schedule = schedule.repeatForever();
     } else {
@@ -89,9 +91,7 @@ public final class QuartzTriggerMapper {
   }
 
   private Trigger mapCalendarInterval(
-      TriggerDefinition definition,
-      JobKey jobKey,
-      CalendarIntervalTriggerSpec specification) {
+      TriggerDefinition definition, JobKey jobKey, CalendarIntervalTriggerSpec specification) {
     CalendarIntervalScheduleBuilder schedule =
         CalendarIntervalScheduleBuilder.calendarIntervalSchedule()
             .withInterval(specification.interval(), calendarIntervalUnit(specification.unit()))
@@ -105,7 +105,9 @@ public final class QuartzTriggerMapper {
     requireDailyTimezoneCompatibleWithJvm(definition.timezone());
 
     Set<Integer> days =
-        specification.daysOfWeek().stream().map(QuartzTriggerMapper::calendarDay).collect(Collectors.toSet());
+        specification.daysOfWeek().stream()
+            .map(QuartzTriggerMapper::calendarDay)
+            .collect(Collectors.toSet());
     DailyTimeIntervalScheduleBuilder schedule =
         DailyTimeIntervalScheduleBuilder.dailyTimeIntervalSchedule()
             .withInterval(specification.interval(), dailyIntervalUnit(specification.unit()))
