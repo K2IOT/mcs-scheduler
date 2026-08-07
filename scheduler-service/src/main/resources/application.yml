@@ -9,6 +9,13 @@ spring:
       port: 9090
   flyway:
     default-schema: public
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
   quartz:
     job-store-type: jdbc
     jdbc:
@@ -24,6 +31,18 @@ spring:
       org.quartz.jobStore.misfireThreshold: 60000
       org.quartz.jobStore.acquireTriggersWithinLock: true
       org.quartz.threadPool.threadCount: 10
+
+mcs:
+  scheduler:
+    kafka:
+      command-topic: ${MCS_SCHEDULER_KAFKA_COMMAND_TOPIC:mcs.scheduler.commands.v1}
+      command-result-topic: ${MCS_SCHEDULER_KAFKA_COMMAND_RESULT_TOPIC:mcs.scheduler.command-results.v1}
+      dlt-topic: ${MCS_SCHEDULER_KAFKA_DLT_TOPIC:mcs.scheduler.commands.v1.DLT}
+      consumer-group: ${MCS_SCHEDULER_KAFKA_CONSUMER_GROUP:mcs-scheduler}
+      partitions: ${MCS_SCHEDULER_KAFKA_PARTITIONS:6}
+      replicas: ${MCS_SCHEDULER_KAFKA_REPLICAS:1}
+      retry-backoff-ms: ${MCS_SCHEDULER_KAFKA_RETRY_BACKOFF_MS:250}
+      retry-attempts: ${MCS_SCHEDULER_KAFKA_RETRY_ATTEMPTS:2}
 
 management:
   endpoints:
