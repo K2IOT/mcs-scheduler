@@ -14,12 +14,15 @@ import io.k2iot.mcs.scheduler.job.ConcurrencyPolicy;
 import io.k2iot.mcs.scheduler.job.JobDefinition;
 import io.k2iot.mcs.scheduler.job.JobRepository;
 import io.k2iot.mcs.scheduler.job.RecoveryPolicy;
+import io.k2iot.mcs.scheduler.trigger.CronTriggerSpec;
+import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
 import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +37,10 @@ class SchedulerCommandFacadeTest {
 
   private static final Instant NOW = Instant.parse("2026-08-06T09:30:00Z");
   private static final UUID REQUEST_ID = UUID.fromString("f0aacd2f-1e28-41f5-84ed-7f72bbc1ae11");
+  private static final UUID TRIGGER_REQUEST_ID =
+      UUID.fromString("47eb098b-300c-4ebc-a1b8-1abac04c55d8");
   private static final UUID JOB_ID = UUID.fromString("85fd9027-cf22-4e8c-af20-90a236c35e3c");
+  private static final UUID TRIGGER_ID = UUID.fromString("985e8fe9-93bb-4b20-8686-b5660c67dc8f");
   private static final UUID DESTINATION_ID =
       UUID.fromString("6b5d06c8-6a48-4d88-9a20-46cbcb727bd9");
 
@@ -79,6 +85,25 @@ class SchedulerCommandFacadeTest {
     assertThat(result.revision()).isEqualTo(1);
     assertThat(result.createdAt()).isEqualTo(NOW);
     assertThat(result.durable()).isTrue();
+  }
+
+  @Test
+  void createTriggerPersistsDomainThenProjectsAndCompletesRequest() {
+    SchedulerCommands.CreateTrigger command = createTriggerCommand();
+    when(commandRequestRepository.findByRequestId(TRIGGER_REQUEST_ID)).thenReturn(Optional.empty());
+    when(commandRequestRepository.insertIfAbsent(any(CommandRequest.class))).thenReturn(true);
+    when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(expectedJob()));
+
+    TriggerDefinition result = facade.createTrigger(command);
+
+    ArgumentCaptor<TriggerDefinition> definition = ArgumentCaptor.forClass(TriggerDefinition.class);
+    verify(commandRequestRepository).insertIfAbsent(any(CommandRequest.class));
+    verify(triggerRepository).insert(definition.capture());
+    verify(schedulerProjection).createTrigger(definition.getValue());
+    verify(commandRequestRepository).complete(eq(TRIGGER_REQUEST_ID), any(), eq(NOW));
+    assertThat(result.triggerId()).isEqualTo(TRIGGER_ID);
+    assertThat(result.jobId()).isEqualTo(JOB_ID);
+    assertThat(result.revision()).isEqualTo(1);
   }
 
   @Test
@@ -168,6 +193,24 @@ class SchedulerCommandFacadeTest {
             RecoveryPolicy.REQUEST_RECOVERY,
             true);
     return new SchedulerCommands.CreateJob(REQUEST_ID, draft, "scheduler-test");
+  }
+
+  private SchedulerCommands.CreateTrigger createTriggerCommand() {
+    SchedulerCommands.TriggerDraft draft =
+        new SchedulerCommands.TriggerDraft(
+            TRIGGER_ID,
+            JOB_ID,
+            "billing",
+            "invoice-noon",
+            "Run invoice scheduler at noon",
+            new CronTriggerSpec("0 0 12 * * ?"),
+            NOW.plusSeconds(60),
+            null,
+            5,
+            "UTC",
+            TriggerDefinition.MisfirePolicy.DO_NOTHING,
+            Set.of());
+    return new SchedulerCommands.CreateTrigger(TRIGGER_REQUEST_ID, draft, "scheduler-test");
   }
 
   private JobDefinition expectedJob() {
