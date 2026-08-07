@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package mcs.scheduler.v1;
+
+option java_multiple_files = true;
+option java_package = "io.k2iot.mcs.scheduler.v1";
+option java_outer_classname = "SchedulerCommandProto";
+
+import "google/protobuf/empty.proto";
+import "mcs/scheduler/v1/common.proto";
+
+service SchedulerCommandService {
+  rpc CreateJob(CreateJobRequest) returns (JobResponse);
+  rpc UpdateJob(UpdateJobRequest) returns (JobResponse);
+  rpc PauseJob(JobMutationRequest) returns (JobResponse);
+  rpc ResumeJob(JobMutationRequest) returns (JobResponse);
+  rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty);
+  rpc CreateTrigger(CreateTriggerRequest) returns (TriggerResponse);
+  rpc ReplaceTrigger(ReplaceTriggerRequest) returns (TriggerResponse);
+  rpc PauseTrigger(TriggerMutationRequest) returns (TriggerResponse);
+  rpc ResumeTrigger(TriggerMutationRequest) returns (TriggerResponse);
+  rpc DeleteTrigger(DeleteTriggerRequest) returns (google.protobuf.Empty);
+  rpc FireTriggerNow(FireTriggerRequest) returns (ExecutionResponse);
+  rpc CreateSchedule(CreateScheduleRequest) returns (ScheduleResponse);
+}
+
+message CreateJobRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  JobDraft job = 4;
+}
+
+message UpdateJobRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  int64 expected_revision = 4;
+  JobDraft job = 5;
+}
+
+message JobMutationRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  string job_id = 4;
+  int64 expected_revision = 5;
+}
+
+message DeleteJobRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  string job_id = 4;
+  int64 expected_revision = 5;
+  bool cascade = 6;
+}
+
+message CreateTriggerRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  TriggerDraft trigger = 4;
+}
+
+message ReplaceTriggerRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  int64 expected_revision = 4;
+  TriggerDraft trigger = 5;
+}
+
+message TriggerMutationRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  string trigger_id = 4;
+  int64 expected_revision = 5;
+}
+
+message DeleteTriggerRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  string trigger_id = 4;
+  int64 expected_revision = 5;
+}
+
+message FireTriggerRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  string trigger_id = 4;
+  string manual_fire_id = 5;
+}
+
+message CreateScheduleRequest {
+  string request_id = 1;
+  string namespace = 2;
+  string caller = 3;
+  JobDraft job = 4;
+  repeated TriggerDraft triggers = 5;
+}
+
+message JobResponse {
+  JobDefinition job = 1;
+}
+
+message TriggerResponse {
+  TriggerDefinition trigger = 1;
+}
+
+message ExecutionResponse {
+  string manual_fire_id = 1;
+  string trigger_id = 2;
+  string job_id = 3;
+}
+
+message ScheduleResponse {
+  JobDefinition job = 1;
+  repeated TriggerDefinition triggers = 2;
+}
