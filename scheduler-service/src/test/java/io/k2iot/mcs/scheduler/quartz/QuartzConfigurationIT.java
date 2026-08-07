@@ -82,10 +82,8 @@ class QuartzConfigurationIT {
     assertThat(scheduler.getTriggersOfJob(QuartzKeys.job(JOB_ID, "billing")))
         .extracting(trigger -> trigger.getKey())
         .containsExactlyInAnyOrder(
-            QuartzKeys.trigger(
-                UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"), "billing"),
-            QuartzKeys.trigger(
-                UUID.fromString("cccccccc-cccc-4ccc-8ccc-cccccccccccc"), "billing"));
+            QuartzKeys.trigger(UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"), "billing"),
+            QuartzKeys.trigger(UUID.fromString("cccccccc-cccc-4ccc-8ccc-cccccccccccc"), "billing"));
   }
 
   private static JobDefinition job() {
