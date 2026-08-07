@@ -126,7 +126,9 @@ class ScheduledExecutionServiceTest {
       data.put(QuartzKeys.MANUAL_FIRE_ID, manualFireId.toString());
     }
     when(context.getMergedJobDataMap()).thenReturn(data);
-    when(context.getScheduledFireTime()).thenReturn(Date.from(FIRE_TIME));
+    if (manualFireId == null) {
+      when(context.getScheduledFireTime()).thenReturn(Date.from(FIRE_TIME));
+    }
     when(context.getFireTime()).thenReturn(Date.from(ACTUAL_FIRE_TIME));
     when(context.isRecovering()).thenReturn(recovering);
     return context;
