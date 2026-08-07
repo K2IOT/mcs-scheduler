@@ -34,8 +34,7 @@ class SchedulerCommandListenerTest {
     SchedulerCommands.CreateSchedule command = mock(SchedulerCommands.CreateSchedule.class);
     SchedulerCommands.ScheduleResult result = mock(SchedulerCommands.ScheduleResult.class);
 
-    when(inboxRepository.insertIfAbsent(any()))
-        .thenReturn(Optional.of(INBOX_ID), Optional.empty());
+    when(inboxRepository.insertIfAbsent(any())).thenReturn(Optional.of(INBOX_ID), Optional.empty());
     when(commandMapper.map(any()))
         .thenReturn(
             new KafkaCommandMapper.MappedCommand(
