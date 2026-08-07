@@ -1,2 +1,3 @@
 io.k2iot.mcs.scheduler.persistence.SchedulerJdbcPersistenceAutoConfiguration
 io.k2iot.mcs.scheduler.command.SchedulerCommandAutoConfiguration
+io.k2iot.mcs.scheduler.grpc.SchedulerGrpcAutoConfiguration
