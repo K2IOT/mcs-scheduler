@@ -34,6 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
+import org.quartz.TriggerKey;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -86,6 +87,21 @@ class ScheduledExecutionServiceTest {
   }
 
   @Test
+  void recoveryUsesOriginalTriggerKeyWhenMergedDataHasNoTriggerId() {
+    when(executionRepository.insertIfAbsent(any())).thenReturn(true);
+
+    service.record(recoveryContext());
+
+    ArgumentCaptor<ExecutionRepository.ExecutionRecord> execution =
+        ArgumentCaptor.forClass(ExecutionRepository.ExecutionRecord.class);
+    verify(executionRepository).insertIfAbsent(execution.capture());
+    verify(outboxRepository).insert(any());
+    assertThat(execution.getValue().triggerId()).isEqualTo(TRIGGER_ID);
+    assertThat(execution.getValue().executionId())
+        .isEqualTo(ExecutionIdentity.forScheduled(TRIGGER_ID, FIRE_TIME));
+  }
+
+  @Test
   void pausedDefinitionCreatesSuppressedExecutionWithoutOutbox() {
     when(triggerRepository.findById(TRIGGER_ID))
         .thenReturn(Optional.of(trigger(TriggerDefinition.State.PAUSED)));
@@ -131,6 +147,20 @@ class ScheduledExecutionServiceTest {
     }
     when(context.getFireTime()).thenReturn(Date.from(ACTUAL_FIRE_TIME));
     when(context.isRecovering()).thenReturn(recovering);
+    return context;
+  }
+
+  private JobExecutionContext recoveryContext() {
+    JobExecutionContext context = org.mockito.Mockito.mock(JobExecutionContext.class);
+    JobDataMap data = new JobDataMap();
+    data.put(QuartzKeys.JOB_ID, JOB_ID.toString());
+    data.put(QuartzKeys.NAMESPACE, "billing");
+    when(context.getMergedJobDataMap()).thenReturn(data);
+    when(context.isRecovering()).thenReturn(true);
+    when(context.getRecoveringTriggerKey())
+        .thenReturn(new TriggerKey(TRIGGER_ID.toString(), "billing"));
+    when(context.getScheduledFireTime()).thenReturn(Date.from(FIRE_TIME));
+    when(context.getFireTime()).thenReturn(Date.from(ACTUAL_FIRE_TIME));
     return context;
   }
 
