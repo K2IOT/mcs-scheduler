@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.UUID;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
+import org.quartz.TriggerKey;
 import org.springframework.transaction.annotation.Transactional;
 
 public class ScheduledExecutionService {
@@ -158,16 +159,19 @@ public class ScheduledExecutionService {
     if (fromData != null) {
       return fromData;
     }
-    if (context.getTrigger() == null || context.getTrigger().getKey() == null) {
+
+    TriggerKey triggerKey =
+        context.isRecovering()
+            ? context.getRecoveringTriggerKey()
+            : context.getTrigger() == null ? null : context.getTrigger().getKey();
+    if (triggerKey == null) {
       throw new IllegalStateException("Quartz trigger identity is missing");
     }
     try {
-      return UUID.fromString(context.getTrigger().getKey().getName());
+      return UUID.fromString(triggerKey.getName());
     } catch (IllegalArgumentException exception) {
       throw new IllegalStateException(
-          "Quartz trigger name is not a scheduler trigger UUID: "
-              + context.getTrigger().getKey().getName(),
-          exception);
+          "Quartz trigger name is not a scheduler trigger UUID: " + triggerKey.getName(), exception);
     }
   }
 
