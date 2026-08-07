@@ -1,18 +1,22 @@
 package io.k2iot.mcs.scheduler.persistence;
 
+import io.k2iot.mcs.scheduler.command.AuditRepository;
 import io.k2iot.mcs.scheduler.command.CommandRequestRepository;
 import io.k2iot.mcs.scheduler.command.JdbcCommandRequestRepository;
 import io.k2iot.mcs.scheduler.destination.DestinationRepository;
 import io.k2iot.mcs.scheduler.destination.JdbcDestinationRepository;
+import io.k2iot.mcs.scheduler.execution.ExecutionQueryService;
 import io.k2iot.mcs.scheduler.execution.ExecutionRepository;
 import io.k2iot.mcs.scheduler.execution.JdbcExecutionRepository;
 import io.k2iot.mcs.scheduler.job.JdbcJobRepository;
+import io.k2iot.mcs.scheduler.job.JobQueryService;
 import io.k2iot.mcs.scheduler.job.JobRepository;
 import io.k2iot.mcs.scheduler.outbox.JdbcOutboxClaimRepository;
 import io.k2iot.mcs.scheduler.outbox.JdbcOutboxRepository;
 import io.k2iot.mcs.scheduler.outbox.OutboxClaimRepository;
 import io.k2iot.mcs.scheduler.outbox.OutboxRepository;
 import io.k2iot.mcs.scheduler.trigger.JdbcTriggerRepository;
+import io.k2iot.mcs.scheduler.trigger.TriggerQueryService;
 import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -68,5 +72,31 @@ public class SchedulerJdbcPersistenceAutoConfiguration {
   @ConditionalOnMissingBean(OutboxClaimRepository.class)
   OutboxClaimRepository outboxClaimRepository(JdbcClient jdbcClient, JsonMapper jsonMapper) {
     return new JdbcOutboxClaimRepository(jdbcClient, jsonMapper);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(AuditRepository.class)
+  AuditRepository auditRepository(JdbcClient jdbcClient, JsonMapper jsonMapper) {
+    return AuditRepository.jdbc(jdbcClient, jsonMapper);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(JobQueryService.class)
+  JobQueryService jobQueryService(JobRepository jobRepository) {
+    return new JobQueryService(jobRepository);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(TriggerQueryService.class)
+  TriggerQueryService triggerQueryService(
+      TriggerRepository triggerRepository, JobRepository jobRepository) {
+    return new TriggerQueryService(triggerRepository, jobRepository);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ExecutionQueryService.class)
+  ExecutionQueryService executionQueryService(
+      ExecutionRepository executionRepository, JobRepository jobRepository) {
+    return new ExecutionQueryService(executionRepository, jobRepository);
   }
 }
