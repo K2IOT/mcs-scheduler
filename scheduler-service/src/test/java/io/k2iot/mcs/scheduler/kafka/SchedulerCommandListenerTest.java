@@ -32,6 +32,7 @@ class SchedulerCommandListenerTest {
     SchedulerCommandFacade commandFacade = mock(SchedulerCommandFacade.class);
     JsonMapper jsonMapper = JsonMapper.builder().build();
     SchedulerCommands.CreateSchedule command = mock(SchedulerCommands.CreateSchedule.class);
+    SchedulerCommands.ScheduleResult result = mock(SchedulerCommands.ScheduleResult.class);
 
     when(inboxRepository.insertIfAbsent(any()))
         .thenReturn(Optional.of(INBOX_ID), Optional.empty());
@@ -39,6 +40,7 @@ class SchedulerCommandListenerTest {
         .thenReturn(
             new KafkaCommandMapper.MappedCommand(
                 "CREATE_SCHEDULE", REQUEST_ID, "billing", REQUEST_ID, command));
+    when(commandFacade.createSchedule(command)).thenReturn(result);
 
     SchedulerCommandListener listener =
         new SchedulerCommandListener(
