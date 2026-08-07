@@ -5,6 +5,10 @@ import io.k2iot.mcs.scheduler.command.JdbcInboxRepository;
 import io.k2iot.mcs.scheduler.command.SchedulerCommandAutoConfiguration;
 import io.k2iot.mcs.scheduler.command.SchedulerCommandException;
 import io.k2iot.mcs.scheduler.command.SchedulerCommandFacade;
+import io.k2iot.mcs.scheduler.outbox.OutboxClaimRepository;
+import io.k2iot.mcs.scheduler.outbox.OutboxProperties;
+import io.k2iot.mcs.scheduler.outbox.OutboxPublisher;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -14,6 +18,7 @@ import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.config.TopicBuilder;
@@ -21,6 +26,7 @@ import org.springframework.kafka.core.KafkaOperations;
 import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.backoff.FixedBackOff;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
@@ -29,6 +35,8 @@ import tools.jackson.databind.json.JsonMapper;
     after = SchedulerCommandAutoConfiguration.class,
     afterName = "org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration")
 @ConditionalOnBean(KafkaOperations.class)
+@EnableConfigurationProperties(OutboxProperties.class)
+@EnableScheduling
 public class KafkaTopicConfiguration {
 
   static final String MESSAGE_ID_HEADER = "mcs.scheduler.messageId";
@@ -51,6 +59,17 @@ public class KafkaTopicConfiguration {
           String commandResultTopic) {
     return new SchedulerCommandListener(
         inboxRepository, commandMapper, commandFacade, jsonMapper, clock, commandResultTopic);
+  }
+
+  @Bean
+  OutboxPublisher schedulerOutboxPublisher(
+      OutboxClaimRepository outboxClaimRepository,
+      KafkaOperations<Object, Object> kafkaOperations,
+      OutboxProperties properties,
+      Clock clock,
+      MeterRegistry meterRegistry) {
+    return new OutboxPublisher(
+        outboxClaimRepository, kafkaOperations, properties, clock, meterRegistry);
   }
 
   @Bean
