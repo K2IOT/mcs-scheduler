@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.quartz.JobDataMap;
@@ -44,15 +45,15 @@ class ScheduledExecutionIdempotencyIT extends PostgresIntegrationTestBase {
 
   @BeforeEach
   void cleanAndSeedState() {
-    jdbc.update("delete from scheduler.outbox_event");
-    jdbc.update("delete from scheduler.execution");
-    jdbc.update("delete from scheduler.trigger_definition");
-    jdbc.update("delete from scheduler.job_definition");
-    jdbc.update("delete from scheduler.destination");
-
+    cleanState();
     insertDestination();
     jobRepository.insert(job());
     triggerRepository.insert(trigger());
+  }
+
+  @AfterEach
+  void cleanTestState() {
+    cleanState();
   }
 
   @Test
@@ -93,6 +94,14 @@ class ScheduledExecutionIdempotencyIT extends PostgresIntegrationTestBase {
                 manualFireId,
                 manualFireId))
         .isEqualTo(1);
+  }
+
+  private void cleanState() {
+    jdbc.update("delete from scheduler.outbox_event");
+    jdbc.update("delete from scheduler.execution");
+    jdbc.update("delete from scheduler.trigger_definition");
+    jdbc.update("delete from scheduler.job_definition");
+    jdbc.update("delete from scheduler.destination");
   }
 
   private void assertExactlyOneExecutionAndOutbox(UUID executionId) {
