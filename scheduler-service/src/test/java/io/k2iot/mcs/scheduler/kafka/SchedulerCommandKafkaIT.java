@@ -36,7 +36,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
       "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
       "spring.kafka.consumer.auto-offset-reset=earliest",
       "spring.kafka.consumer.enable-auto-commit=false",
-      "mcs.scheduler.kafka.consumer-group=task-9-kafka-it"
+      "mcs.scheduler.kafka.consumer-group=task-9-kafka-it",
+      "mcs.scheduler.kafka.command-result-topic=mcs.scheduler.command-results.test.v1"
     })
 @EmbeddedKafka(
     partitions = 1,
@@ -44,6 +45,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 class SchedulerCommandKafkaIT {
 
   private static final String COMMAND_TOPIC = "mcs.scheduler.commands.v1";
+  private static final String RESULT_TOPIC = "mcs.scheduler.command-results.test.v1";
   private static final String DLT_TOPIC = "mcs.scheduler.commands.v1.DLT";
   private static final Instant NOW = Instant.parse("2026-08-07T04:00:00Z");
   private static final UUID MESSAGE_ID = UUID.fromString("51000000-0000-4000-8000-000000000001");
@@ -114,6 +116,10 @@ class SchedulerCommandKafkaIT {
     assertThat(count("scheduler.job_definition")).isEqualTo(1);
     assertThat(count("scheduler.trigger_definition")).isEqualTo(1);
     assertThat(count("scheduler.outbox_event")).isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "select headers ->> 'topic' from scheduler.outbox_event", String.class))
+        .isEqualTo(RESULT_TOPIC);
   }
 
   @Test
