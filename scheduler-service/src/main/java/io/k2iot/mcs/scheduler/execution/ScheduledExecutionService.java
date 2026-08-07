@@ -141,7 +141,9 @@ public class ScheduledExecutionService {
     snapshot.put("triggerRevision", trigger.revision());
     snapshot.put("destinationId", job.destinationId().toString());
     snapshot.put("destinationVersion", job.destinationVersion());
-    snapshot.put("destinationTopic", destination == null ? null : destination.topic());
+    if (destination != null) {
+      snapshot.put("destinationTopic", destination.topic());
+    }
     snapshot.put("payload", job.payload());
     snapshot.put("headers", job.headers());
     snapshot.put("recovery", recovery);
