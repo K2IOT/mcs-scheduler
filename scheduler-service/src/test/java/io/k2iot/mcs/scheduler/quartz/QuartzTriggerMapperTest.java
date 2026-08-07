@@ -43,7 +43,8 @@ class QuartzTriggerMapperTest {
     assertThat(QuartzKeys.job(JOB_ID, "billing"))
         .extracting(JobKey::getName, JobKey::getGroup)
         .containsExactly(JOB_ID.toString(), "billing");
-    assertThat(QuartzKeys.trigger(TRIGGER_ID, "billing").getName()).isEqualTo(TRIGGER_ID.toString());
+    assertThat(QuartzKeys.trigger(TRIGGER_ID, "billing").getName())
+        .isEqualTo(TRIGGER_ID.toString());
     assertThat(QuartzKeys.trigger(TRIGGER_ID, "billing").getGroup()).isEqualTo("billing");
   }
 
@@ -64,7 +65,8 @@ class QuartzTriggerMapperTest {
     SimpleTrigger simple = (SimpleTrigger) trigger;
     assertThat(simple.getStartTime()).isEqualTo(Date.from(fireAt));
     assertThat(simple.getRepeatCount()).isZero();
-    assertThat(simple.getMisfireInstruction()).isEqualTo(SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
+    assertThat(simple.getMisfireInstruction())
+        .isEqualTo(SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
   }
 
   @Test
@@ -144,7 +146,8 @@ class QuartzTriggerMapperTest {
     DailyTimeIntervalTrigger daily = (DailyTimeIntervalTrigger) trigger;
     assertThat(daily.getRepeatIntervalUnit()).isEqualTo(DateBuilder.IntervalUnit.MINUTE);
     assertThat(daily.getRepeatInterval()).isEqualTo(15);
-    assertThat(daily.getDaysOfWeek()).containsExactlyInAnyOrder(Calendar.MONDAY, Calendar.WEDNESDAY);
+    assertThat(daily.getDaysOfWeek())
+        .containsExactlyInAnyOrder(Calendar.MONDAY, Calendar.WEDNESDAY);
     assertThat(daily.getStartTimeOfDay()).isEqualTo(new TimeOfDay(8, 30, 0));
     assertThat(daily.getEndTimeOfDay()).isEqualTo(new TimeOfDay(18, 15, 0));
     assertThat(daily.getMisfireInstruction())
