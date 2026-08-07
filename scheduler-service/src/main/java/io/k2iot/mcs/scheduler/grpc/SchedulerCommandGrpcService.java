@@ -20,11 +20,7 @@ import io.k2iot.mcs.scheduler.v1.TriggerResponse;
 import io.k2iot.mcs.scheduler.v1.UpdateJobRequest;
 import java.util.Objects;
 import java.util.function.Supplier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Service;
 
-@Service
-@ConditionalOnBean(SchedulerCommandFacade.class)
 public final class SchedulerCommandGrpcService
     extends SchedulerCommandServiceGrpc.SchedulerCommandServiceImplBase {
 
