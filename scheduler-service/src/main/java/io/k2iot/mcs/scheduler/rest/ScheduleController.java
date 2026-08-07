@@ -29,7 +29,8 @@ public final class ScheduleController {
       @RequestHeader("Idempotency-Key") String idempotencyKey,
       @RequestBody RestModels.CreateScheduleRequest request) {
     UUID requestId = mapper.requestId(idempotencyKey);
-    SchedulerCommands.ScheduleResult result = facade.createSchedule(mapper.createSchedule(requestId, request));
+    SchedulerCommands.ScheduleResult result =
+        facade.createSchedule(mapper.createSchedule(requestId, request));
     return ResponseEntity.created(URI.create("/api/v1/jobs/" + result.job().jobId()))
         .eTag(etag(result.job().revision()))
         .body(new RestModels.ScheduleResponse(result.job(), result.triggers()));
