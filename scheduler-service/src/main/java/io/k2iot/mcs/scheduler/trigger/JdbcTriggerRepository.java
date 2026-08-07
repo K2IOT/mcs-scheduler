@@ -43,18 +43,91 @@ public class JdbcTriggerRepository implements TriggerRepository {
   }
 
   @Override
+  public List<TriggerDefinition> findPausedByJobId(UUID jobId, PauseReason pauseReason) {
+    return jdbc.sql(
+            baseSelect()
+                + " where job_id = :jobId and state = 'PAUSED' and pause_reason = :pauseReason"
+                + " order by created_at, trigger_id")
+        .param("jobId", jobId)
+        .param("pauseReason", pauseReason.name())
+        .query(this::mapTrigger)
+        .list();
+  }
+
+  @Override
+  public List<TriggerDefinition> findPage(
+      String namespace, Instant createdAfter, UUID idAfter, int limit) {
+    String cursor =
+        createdAfter == null
+            ? ""
+            : " and (created_at > :createdAfter or (created_at = :createdAfter and trigger_id > :idAfter))";
+    JdbcClient.StatementSpec statement =
+        jdbc.sql(
+                baseSelect()
+                    + " where namespace = :namespace and state <> 'DELETED'"
+                    + cursor
+                    + " order by created_at, trigger_id limit :limit")
+            .param("namespace", namespace)
+            .param("limit", limit);
+    if (createdAfter != null) {
+      statement =
+          statement
+              .param("createdAfter", postgresTimestamp(createdAfter))
+              .param("idAfter", idAfter);
+    }
+    return statement.query(this::mapTrigger).list();
+  }
+
+  @Override
+  public List<TriggerDefinition> findByJobIdPage(
+      UUID jobId, Instant createdAfter, UUID idAfter, int limit) {
+    String cursor =
+        createdAfter == null
+            ? ""
+            : " and (created_at > :createdAfter or (created_at = :createdAfter and trigger_id > :idAfter))";
+    JdbcClient.StatementSpec statement =
+        jdbc.sql(
+                baseSelect()
+                    + " where job_id = :jobId and state <> 'DELETED'"
+                    + cursor
+                    + " order by created_at, trigger_id limit :limit")
+            .param("jobId", jobId)
+            .param("limit", limit);
+    if (createdAfter != null) {
+      statement =
+          statement
+              .param("createdAfter", postgresTimestamp(createdAfter))
+              .param("idAfter", idAfter);
+    }
+    return statement.query(this::mapTrigger).list();
+  }
+
+  @Override
+  public Optional<PauseReason> findPauseReason(UUID triggerId) {
+    return jdbc.sql(
+            "select pause_reason from scheduler.trigger_definition where trigger_id = :triggerId")
+        .param("triggerId", triggerId)
+        .query(
+            (resultSet, rowNumber) -> {
+              String value = resultSet.getString("pause_reason");
+              return value == null ? null : PauseReason.valueOf(value);
+            })
+        .optional();
+  }
+
+  @Override
   public void insert(TriggerDefinition definition) {
     jdbc.sql(
             """
             insert into scheduler.trigger_definition (
                 trigger_id, job_id, namespace, name, description, type, spec,
                 start_at, end_at, priority, timezone, misfire_policy, calendar_names,
-                state, revision, created_at, created_by, updated_at, updated_by,
+                state, pause_reason, revision, created_at, created_by, updated_at, updated_by,
                 deleted_at, deleted_by)
             values (
                 :triggerId, :jobId, :namespace, :name, :description, :type,
                 cast(:spec as jsonb), :startAt, :endAt, :priority, :timezone,
-                :misfirePolicy, cast(:calendarNames as jsonb), :state, :revision,
+                :misfirePolicy, cast(:calendarNames as jsonb), :state, null, :revision,
                 :createdAt, :createdBy, :updatedAt, :updatedBy, :deletedAt, :deletedBy)
             """)
         .param("triggerId", definition.triggerId())
@@ -100,6 +173,7 @@ public class JdbcTriggerRepository implements TriggerRepository {
                     misfire_policy = :misfirePolicy,
                     calendar_names = cast(:calendarNames as jsonb),
                     state = :state,
+                    pause_reason = case when :state = 'PAUSED' then pause_reason else null end,
                     revision = :revision,
                     updated_at = :updatedAt,
                     updated_by = :updatedBy,
@@ -129,6 +203,23 @@ public class JdbcTriggerRepository implements TriggerRepository {
             .param("expectedRevision", expectedRevision)
             .update();
     return updated == 1;
+  }
+
+  @Override
+  public void setPauseReason(UUID triggerId, PauseReason pauseReason) {
+    int updated =
+        jdbc.sql(
+                """
+                update scheduler.trigger_definition
+                set pause_reason = :pauseReason
+                where trigger_id = :triggerId and state = 'PAUSED'
+                """)
+            .param("pauseReason", pauseReason.name())
+            .param("triggerId", triggerId)
+            .update();
+    if (updated != 1) {
+      throw new IllegalStateException("Cannot set pause reason for a non-paused trigger");
+    }
   }
 
   private String baseSelect() {
