@@ -141,8 +141,7 @@ public class SchedulerCommandListener {
     Map<String, String> headers = new LinkedHashMap<>();
     for (Header header : record.headers()) {
       byte[] value = header.value();
-      headers.put(
-          header.key(), value == null ? "" : new String(value, StandardCharsets.UTF_8));
+      headers.put(header.key(), value == null ? "" : new String(value, StandardCharsets.UTF_8));
     }
     return Map.copyOf(headers);
   }
