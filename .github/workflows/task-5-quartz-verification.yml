@@ -33,8 +33,11 @@ jobs:
       - name: Run focused Task 5 tests
         run: ./mvnw -B -pl scheduler-service -am -Dtest=QuartzTriggerMapperTest,QuartzSchedulerProjectionTest,QuartzConfigurationIT -Dsurefire.failIfNoSpecifiedTests=false test
 
-      - name: Check Java formatting
-        run: ./mvnw -B spotless:check
+      - name: Show Java formatting patch
+        run: |
+          ./mvnw -B spotless:apply
+          git diff -- scheduler-service/src
+          git diff --exit-code -- scheduler-service/src
 
       - name: Run full Maven verification
         run: ./mvnw -B verify
