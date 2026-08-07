@@ -202,7 +202,6 @@ class OutboxPublisherKafkaIT {
         JOB_ID,
         NOW.atOffset(ZoneOffset.UTC),
         NOW.atOffset(ZoneOffset.UTC),
-        NOW.atOffset(ZoneOffset.UTC),
         NOW.atOffset(ZoneOffset.UTC));
     jdbc.update(
         """
