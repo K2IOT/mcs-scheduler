@@ -47,7 +47,8 @@ class SchedulerCommandListenerTest {
             commandMapper,
             commandFacade,
             jsonMapper,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            "mcs.scheduler.command-results.v1");
 
     String value =
         jsonMapper.writeValueAsString(
