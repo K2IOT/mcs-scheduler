@@ -3,18 +3,28 @@ package io.k2iot.mcs.scheduler.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.k2iot.mcs.scheduler.SchedulerApplication;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.UUID;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.quartz.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -33,6 +43,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
     topics = {"mcs.scheduler.commands.v1", "mcs.scheduler.commands.v1.DLT"})
 class SchedulerCommandKafkaIT {
 
+  private static final String COMMAND_TOPIC = "mcs.scheduler.commands.v1";
+  private static final String DLT_TOPIC = "mcs.scheduler.commands.v1.DLT";
   private static final Instant NOW = Instant.parse("2026-08-07T04:00:00Z");
   private static final UUID MESSAGE_ID = UUID.fromString("51000000-0000-4000-8000-000000000001");
   private static final UUID REQUEST_ID = UUID.fromString("52000000-0000-4000-8000-000000000001");
@@ -60,6 +72,7 @@ class SchedulerCommandKafkaIT {
 
   @Autowired JdbcTemplate jdbc;
   @Autowired KafkaTemplate<String, String> kafkaTemplate;
+  @Autowired EmbeddedKafkaBroker embeddedKafka;
   @Autowired Scheduler scheduler;
 
   @BeforeEach
@@ -89,8 +102,8 @@ class SchedulerCommandKafkaIT {
     String command = createScheduleEnvelope();
     String key = "billing:" + JOB_ID;
 
-    kafkaTemplate.send("mcs.scheduler.commands.v1", key, command).get();
-    kafkaTemplate.send("mcs.scheduler.commands.v1", key, command).get();
+    kafkaTemplate.send(COMMAND_TOPIC, key, command).get();
+    kafkaTemplate.send(COMMAND_TOPIC, key, command).get();
 
     awaitCount("scheduler.inbox_message", 1, Duration.ofSeconds(15));
     awaitCount("scheduler.job_definition", 1, Duration.ofSeconds(15));
@@ -100,6 +113,36 @@ class SchedulerCommandKafkaIT {
     assertThat(count("scheduler.job_definition")).isEqualTo(1);
     assertThat(count("scheduler.trigger_definition")).isEqualTo(1);
     assertThat(count("scheduler.outbox_event")).isEqualTo(1);
+  }
+
+  @Test
+  void invalidCommandRollsBackInboxAndPublishesStableDeadLetterHeaders() throws Exception {
+    Map<String, Object> consumerProperties =
+        KafkaTestUtils.consumerProps(embeddedKafka, "task-9-dlt-reader-" + UUID.randomUUID(), false);
+    DefaultKafkaConsumerFactory<String, String> consumerFactory =
+        new DefaultKafkaConsumerFactory<>(
+            consumerProperties, new StringDeserializer(), new StringDeserializer());
+
+    try (Consumer<String, String> consumer = consumerFactory.createConsumer()) {
+      embeddedKafka.consumeFromAnEmbeddedTopic(consumer, DLT_TOPIC);
+      kafkaTemplate
+          .send(COMMAND_TOPIC, "billing:" + REQUEST_ID, invalidCommandEnvelope())
+          .get();
+
+      ConsumerRecord<String, String> deadLetter =
+          KafkaTestUtils.getSingleRecord(consumer, DLT_TOPIC);
+
+      assertThat(headerText(deadLetter, KafkaTopicConfiguration.MESSAGE_ID_HEADER))
+          .isEqualTo(MESSAGE_ID.toString());
+      assertThat(headerText(deadLetter, KafkaTopicConfiguration.REQUEST_ID_HEADER))
+          .isEqualTo(REQUEST_ID.toString());
+      assertThat(headerText(deadLetter, KafkaTopicConfiguration.ERROR_CODE_HEADER))
+          .isEqualTo("UNKNOWN_COMMAND_TYPE");
+      assertThat(deadLetter.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_TOPIC)).isNotNull();
+      assertThat(deadLetter.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_PARTITION)).isNotNull();
+      assertThat(deadLetter.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_OFFSET)).isNotNull();
+      assertThat(count("scheduler.inbox_message")).isZero();
+    }
   }
 
   private String createScheduleEnvelope() {
@@ -149,6 +192,22 @@ class SchedulerCommandKafkaIT {
         .formatted(MESSAGE_ID, REQUEST_ID, JOB_ID, DESTINATION_ID, TRIGGER_ID, JOB_ID);
   }
 
+  private String invalidCommandEnvelope() {
+    return """
+        {
+          "schemaVersion": 1,
+          "messageId": "%s",
+          "requestId": "%s",
+          "occurredAt": "2026-08-07T04:00:00Z",
+          "producer": "billing-service",
+          "namespace": "billing",
+          "commandType": "UNKNOWN_COMMAND",
+          "payload": {}
+        }
+        """
+        .formatted(MESSAGE_ID, REQUEST_ID);
+  }
+
   private void awaitCount(String table, int expected, Duration timeout) throws InterruptedException {
     Instant deadline = Instant.now().plus(timeout);
     while (Instant.now().isBefore(deadline)) {
@@ -163,5 +222,11 @@ class SchedulerCommandKafkaIT {
   private int count(String table) {
     Integer value = jdbc.queryForObject("select count(*) from " + table, Integer.class);
     return value == null ? 0 : value;
+  }
+
+  private static String headerText(ConsumerRecord<String, String> record, String headerName) {
+    Header header = record.headers().lastHeader(headerName);
+    assertThat(header).as(headerName).isNotNull();
+    return new String(header.value(), StandardCharsets.UTF_8);
   }
 }
