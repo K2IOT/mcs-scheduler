@@ -10,8 +10,20 @@ spring:
   flyway:
     default-schema: public
   quartz:
+    job-store-type: jdbc
     jdbc:
       initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceName: mcs-scheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.scheduler.batchTriggerAcquisitionMaxCount: 10
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.tablePrefix: quartz.QRTZ_
+      org.quartz.jobStore.clusterCheckinInterval: 10000
+      org.quartz.jobStore.misfireThreshold: 60000
+      org.quartz.jobStore.acquireTriggersWithinLock: true
+      org.quartz.threadPool.threadCount: 10
 
 management:
   endpoints:
