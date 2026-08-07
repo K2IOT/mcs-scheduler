@@ -91,9 +91,7 @@ class SchedulerCommandFacadeQuartzTest {
         .hasMessageContaining("Failed to create trigger");
 
     assertThat(countById("scheduler.trigger_definition", "trigger_id", CRON_TRIGGER_ID)).isZero();
-    assertThat(
-            countById(
-                "scheduler.command_request", "request_id", TRIGGER_REQUEST_ID.toString()))
+    assertThat(countById("scheduler.command_request", "request_id", TRIGGER_REQUEST_ID.toString()))
         .isZero();
     assertThat(scheduler.getTrigger(QuartzKeys.trigger(CRON_TRIGGER_ID, "billing"))).isNull();
     assertThat(countById("scheduler.job_definition", "job_id", JOB_ID)).isEqualTo(1);
