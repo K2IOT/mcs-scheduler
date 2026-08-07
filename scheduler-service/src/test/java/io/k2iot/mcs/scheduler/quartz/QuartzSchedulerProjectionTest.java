@@ -68,7 +68,8 @@ class QuartzSchedulerProjectionTest {
 
     ArgumentCaptor<JobDetail> detailCaptor = ArgumentCaptor.forClass(JobDetail.class);
     verify(scheduler).addJob(detailCaptor.capture(), eq(false), eq(true));
-    assertThat(detailCaptor.getValue().getJobClass()).isEqualTo(NonConcurrentDispatchQuartzJob.class);
+    assertThat(detailCaptor.getValue().getJobClass())
+        .isEqualTo(NonConcurrentDispatchQuartzJob.class);
     assertThat(detailCaptor.getValue().isDurable()).isTrue();
     assertThat(detailCaptor.getValue().requestsRecovery()).isFalse();
   }
