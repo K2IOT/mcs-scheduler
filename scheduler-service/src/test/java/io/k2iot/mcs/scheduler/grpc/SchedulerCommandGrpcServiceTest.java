@@ -406,12 +406,18 @@ class SchedulerCommandGrpcServiceTest {
   }
 
   @EnableAutoConfiguration
-  @Import({SchedulerCommandGrpcService.class, GrpcCommandMapper.class, GrpcErrorMapper.class})
+  @Import({GrpcCommandMapper.class, GrpcErrorMapper.class})
   static class TestConfig {
 
     @Bean
     SchedulerCommandFacade schedulerCommandFacade() {
       return mock(SchedulerCommandFacade.class);
+    }
+
+    @Bean
+    SchedulerCommandGrpcService schedulerCommandGrpcService(
+        SchedulerCommandFacade facade, GrpcCommandMapper mapper, GrpcErrorMapper errorMapper) {
+      return new SchedulerCommandGrpcService(facade, mapper, errorMapper);
     }
   }
 }
