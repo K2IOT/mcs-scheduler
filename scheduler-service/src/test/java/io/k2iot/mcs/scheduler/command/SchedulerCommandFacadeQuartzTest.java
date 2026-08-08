@@ -30,7 +30,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
     classes = SchedulerApplication.class,
     properties = {
       "spring.autoconfigure.exclude=org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
-      "spring.flyway.enabled=true"
+      "spring.flyway.enabled=true",
+      "spring.grpc.server.port=0"
     })
 class SchedulerCommandFacadeQuartzTest {
 

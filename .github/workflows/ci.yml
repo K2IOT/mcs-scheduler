@@ -60,13 +60,40 @@ jobs:
         run: >-
           ./mvnw $MAVEN_ARGS -pl scheduler-service -am
           -Dfailsafe.failIfNoSpecifiedTests=false
-          -Dit.test='*IT,!RestartPersistenceIT,!TwoNodeQuartzClusterIT,!ProcessKillRecoveryIT'
+          -Dit.test='*IT,!RestartPersistenceIT,!TwoNodeQuartzClusterIT,!ProcessKillRecoveryIT,!FinalAcceptanceIT'
           verify
       - name: Upload integration diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: postgres-kafka-integration-diagnostics
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+          if-no-files-found: warn
+
+  final-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Enable Maven wrapper
+        run: chmod +x mvnw
+      - name: Run cross-interface final acceptance
+        run: >-
+          ./mvnw $MAVEN_ARGS -pl scheduler-service -am
+          -Dfailsafe.failIfNoSpecifiedTests=false
+          -Dit.test=FinalAcceptanceIT verify
+      - name: Upload final acceptance diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-acceptance-diagnostics
           path: |
             **/target/surefire-reports/**
             **/target/failsafe-reports/**
@@ -139,14 +166,145 @@ jobs:
       - name: Validate Compose topology
         run: docker compose -f docker/compose.yml config
 
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start production-like two-node topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f docker/compose.yml up --build -d
+      - name: Verify both REST nodes are healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          for port in 8081 8082; do
+            healthy=false
+            for attempt in $(seq 1 60); do
+              if curl --fail --silent --show-error "http://127.0.0.1:${port}/actuator/health" >/dev/null; then
+                healthy=true
+                break
+              fi
+              sleep 2
+            done
+            if [[ "$healthy" != true ]]; then
+              echo "Scheduler REST node on port ${port} did not become healthy"
+              exit 1
+            fi
+          done
+      - name: Verify two Quartz scheduler instances share the database
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          for attempt in $(seq 1 30); do
+            count="$(docker compose -f docker/compose.yml exec -T postgres \
+              psql -U scheduler -d scheduler -Atc \
+              'select count(*) from quartz.qrtz_scheduler_state;')"
+            if [[ "$count" == "2" ]]; then
+              break
+            fi
+            sleep 2
+          done
+          echo "Quartz scheduler_state rows=${count}"
+          test "$count" = "2"
+      - name: Probe gRPC transport with grpcurl
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(docker run --rm --network host \
+            -v "$PWD:/work" \
+            fullstorydev/grpcurl:v1.9.3 \
+            -plaintext \
+            -import-path /work/scheduler-contracts/src/main/proto \
+            -proto mcs/scheduler/v1/scheduler_query.proto \
+            -d '{"namespace":"diagnostic","jobId":"00000000-0000-0000-0000-000000000001"}' \
+            127.0.0.1:9091 \
+            mcs.scheduler.v1.SchedulerQueryService/GetJob 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output" | tee grpc-transport.txt
+          if printf '%s\n' "$output" | grep -qiE 'NotFound|NOT_FOUND|JOB_NOT_FOUND'; then
+            exit 0
+          fi
+          exit "$status"
+      - name: Capture Compose diagnostics
+        if: always()
+        shell: bash
+        run: |
+          docker compose -f docker/compose.yml ps > compose-ps.txt 2>&1 || true
+          docker compose -f docker/compose.yml logs --no-color > compose-smoke.log 2>&1 || true
+      - name: Tear down topology
+        if: always()
+        run: docker compose -f docker/compose.yml down -v --remove-orphans
+      - name: Upload Compose diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-smoke-diagnostics
+          path: |
+            compose-ps.txt
+            compose-smoke.log
+            grpc-transport.txt
+          if-no-files-found: warn
+
+  migration-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject edits to released Flyway migrations
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+          elif [[ "$EVENT_NAME" == "push" && -n "$PUSH_BEFORE_SHA" && ! "$PUSH_BEFORE_SHA" =~ ^0+$ ]]; then
+            base="$PUSH_BEFORE_SHA"
+          else
+            base="$(git rev-parse HEAD^)"
+          fi
+
+          git diff --name-status "$base" HEAD -- \
+            scheduler-service/src/main/resources/db/migration | tee migration-diff.txt
+
+          while IFS=$'\t' read -r status path remainder; do
+            [[ -z "$status" ]] && continue
+            if [[ "$status" == A* ]]; then
+              continue
+            fi
+            echo "Released Flyway migration changed: ${status} ${path} ${remainder}"
+            echo "Released migrations are immutable; add a new versioned migration instead."
+            exit 1
+          done < migration-diff.txt
+      - name: Upload migration compatibility diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-compatibility-diagnostics
+          path: migration-diff.txt
+          if-no-files-found: warn
+
   validate:
     if: always()
     needs:
       - format-and-unit
       - postgres-kafka-integration
+      - final-acceptance
       - quartz-two-node-cluster
       - process-kill-recovery
       - package-image
+      - compose-smoke
+      - migration-compatibility
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -155,13 +313,18 @@ jobs:
         env:
           FORMAT_UNIT: ${{ needs.format-and-unit.result }}
           INTEGRATION: ${{ needs.postgres-kafka-integration.result }}
+          FINAL_ACCEPTANCE: ${{ needs.final-acceptance.result }}
           CLUSTER: ${{ needs.quartz-two-node-cluster.result }}
           PROCESS_KILL: ${{ needs.process-kill-recovery.result }}
           IMAGE: ${{ needs.package-image.result }}
+          COMPOSE_SMOKE: ${{ needs.compose-smoke.result }}
+          MIGRATIONS: ${{ needs.migration-compatibility.result }}
         run: |
-          printf 'format-and-unit=%s\nintegration=%s\ncluster=%s\nprocess-kill=%s\nimage=%s\n' \
-            "$FORMAT_UNIT" "$INTEGRATION" "$CLUSTER" "$PROCESS_KILL" "$IMAGE"
-          for result in "$FORMAT_UNIT" "$INTEGRATION" "$CLUSTER" "$PROCESS_KILL" "$IMAGE"; do
+          printf 'format-and-unit=%s\nintegration=%s\nfinal-acceptance=%s\ncluster=%s\nprocess-kill=%s\nimage=%s\ncompose-smoke=%s\nmigrations=%s\n' \
+            "$FORMAT_UNIT" "$INTEGRATION" "$FINAL_ACCEPTANCE" "$CLUSTER" \
+            "$PROCESS_KILL" "$IMAGE" "$COMPOSE_SMOKE" "$MIGRATIONS"
+          for result in "$FORMAT_UNIT" "$INTEGRATION" "$FINAL_ACCEPTANCE" "$CLUSTER" \
+                        "$PROCESS_KILL" "$IMAGE" "$COMPOSE_SMOKE" "$MIGRATIONS"; do
             if [[ "$result" != "success" ]]; then
               echo 'One or more required CI gates did not succeed.'
               exit 1
