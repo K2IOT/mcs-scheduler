@@ -2,16 +2,20 @@ package io.k2iot.mcs.scheduler.observability;
 
 import io.k2iot.mcs.scheduler.command.SchedulerProjectionPort;
 import io.k2iot.mcs.scheduler.job.JobRepository;
+import io.k2iot.mcs.scheduler.persistence.SchedulerJdbcPersistenceAutoConfiguration;
 import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.quartz.Scheduler;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.quartz.autoconfigure.QuartzAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 @AutoConfiguration
+@AutoConfigureAfter({QuartzAutoConfiguration.class, SchedulerJdbcPersistenceAutoConfiguration.class})
 public class SchedulerObservabilityAutoConfiguration {
 
   @Bean
