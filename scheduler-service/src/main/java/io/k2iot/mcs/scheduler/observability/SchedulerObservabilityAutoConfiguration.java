@@ -15,7 +15,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 @AutoConfiguration
-@AutoConfigureAfter({QuartzAutoConfiguration.class, SchedulerJdbcPersistenceAutoConfiguration.class})
+@AutoConfigureAfter({
+  QuartzAutoConfiguration.class,
+  SchedulerJdbcPersistenceAutoConfiguration.class
+})
 public class SchedulerObservabilityAutoConfiguration {
 
   @Bean
