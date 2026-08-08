@@ -1,0 +1,27 @@
+name: Task 15 Format Preview
+
+on:
+  push:
+    branches:
+      - feature/task15-process-kill
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Apply formatter and print Task 15 test
+        shell: bash
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -ntp -pl scheduler-service spotless:apply
+          cat scheduler-service/src/test/java/io/k2iot/mcs/scheduler/cluster/ProcessKillRecoveryIT.java
