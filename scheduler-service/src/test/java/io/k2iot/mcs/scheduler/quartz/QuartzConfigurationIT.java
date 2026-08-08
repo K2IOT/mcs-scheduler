@@ -7,6 +7,7 @@ import io.k2iot.mcs.scheduler.command.SchedulerProjectionPort;
 import io.k2iot.mcs.scheduler.job.ConcurrencyPolicy;
 import io.k2iot.mcs.scheduler.job.JobDefinition;
 import io.k2iot.mcs.scheduler.job.RecoveryPolicy;
+import io.k2iot.mcs.scheduler.observability.QuartzReconciler;
 import io.k2iot.mcs.scheduler.trigger.CronTriggerSpec;
 import io.k2iot.mcs.scheduler.trigger.OnceTriggerSpec;
 import io.k2iot.mcs.scheduler.trigger.TriggerDefinition;
@@ -56,6 +57,8 @@ class QuartzConfigurationIT {
 
   @Autowired private Scheduler scheduler;
   @Autowired private SchedulerProjectionPort projection;
+  @Autowired(required = false)
+  private QuartzReconciler reconciler;
 
   @AfterEach
   void clearQuartzState() throws Exception {
@@ -71,6 +74,7 @@ class QuartzConfigurationIT {
     assertThat(metadata.getJobStoreClass().getName()).contains("LocalDataSourceJobStore");
     assertThat(scheduler.getSchedulerName()).isEqualTo("mcs-scheduler");
     assertThat(projection).isInstanceOf(QuartzSchedulerProjection.class);
+    assertThat(reconciler).isNotNull();
   }
 
   @Test
