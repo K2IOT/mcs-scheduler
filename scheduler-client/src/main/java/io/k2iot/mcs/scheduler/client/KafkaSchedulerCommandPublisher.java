@@ -88,11 +88,7 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
     Objects.requireNonNull(manualFireId, "manualFireId");
     String normalizedNamespace = requireText(namespace, "namespace");
     String payload =
-        "{\"triggerId\":\""
-            + triggerId
-            + "\",\"manualFireId\":\""
-            + manualFireId
-            + "\"}";
+        "{\"triggerId\":\"" + triggerId + "\",\"manualFireId\":\"" + manualFireId + "\"}";
     return publish(
         "FIRE_TRIGGER_NOW",
         normalizedNamespace,
@@ -165,7 +161,8 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
     try {
       return jsonPrinter.print(value);
     } catch (Exception exception) {
-      throw new IllegalArgumentException("Unable to serialize scheduler command payload", exception);
+      throw new IllegalArgumentException(
+          "Unable to serialize scheduler command payload", exception);
     }
   }
 
