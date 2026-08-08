@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(after = SchedulerCommandAutoConfiguration.class)
-@ConditionalOnBean(SchedulerCommandFacade.class)
+@ConditionalOnBean({SchedulerCommandFacade.class, RestCommandMapper.class})
 public class SchedulerRestAutoConfiguration {
 
   @Bean
