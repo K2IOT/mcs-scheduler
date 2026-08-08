@@ -1,9 +1,11 @@
 package io.k2iot.mcs.scheduler.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.k2iot.mcs.scheduler.v1.CreateScheduleRequest;
@@ -55,6 +57,24 @@ class GrpcSchedulerClientTest {
     verify(stub).createSchedule(request.capture());
     assertThat(calls[0]).isEqualTo(1);
     assertThat(request.getValue().getRequestId()).isEqualTo(GENERATED_REQUEST_ID.toString());
+  }
+
+  @Test
+  void rejectsCascadeDeleteUnsupportedBySchedulerV1() {
+    var stub = mock(SchedulerCommandServiceGrpc.SchedulerCommandServiceBlockingStub.class);
+    var client = new GrpcSchedulerClient(stub, () -> GENERATED_REQUEST_ID);
+
+    assertThatThrownBy(
+            () ->
+                client.deleteJob(
+                    UUID.fromString("77000000-0000-4000-8000-000000000001"),
+                    "billing",
+                    1,
+                    true,
+                    SUPPLIED_REQUEST_ID))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("cascade");
+    verifyNoInteractions(stub);
   }
 
   private CreateScheduleRequest baseRequest() {
