@@ -29,7 +29,9 @@ public final class GrpcSchedulerClient implements SchedulerClient {
 
   public GrpcSchedulerClient(GrpcChannelFactory channels, String target, String caller) {
     this(
-        () -> SchedulerCommandServiceGrpc.newBlockingStub(channels.createChannel(requireText(target, "target"))),
+        () ->
+            SchedulerCommandServiceGrpc.newBlockingStub(
+                channels.createChannel(requireText(target, "target"))),
         UUID::randomUUID,
         caller);
   }
@@ -58,7 +60,8 @@ public final class GrpcSchedulerClient implements SchedulerClient {
   }
 
   @Override
-  public JobResponse resumeJob(UUID jobId, String namespace, long expectedRevision, UUID requestId) {
+  public JobResponse resumeJob(
+      UUID jobId, String namespace, long expectedRevision, UUID requestId) {
     return stub().resumeJob(jobMutation(jobId, namespace, expectedRevision, requestId));
   }
 
