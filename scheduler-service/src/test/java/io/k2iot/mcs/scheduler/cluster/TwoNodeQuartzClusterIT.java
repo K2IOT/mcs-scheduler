@@ -20,13 +20,13 @@ class TwoNodeQuartzClusterIT {
 
       UUID destinationId = UUID.randomUUID();
       Set<UUID> expectedExecutionIds = new LinkedHashSet<>();
-      Instant firstFireAt = Instant.now().plusSeconds(12).truncatedTo(ChronoUnit.MILLIS);
 
       try (var nodeA = cluster.startNode("cluster-a");
           var nodeB = cluster.startNode("cluster-b");
           var consumer = cluster.newExecutionConsumer()) {
         assertThat(nodeB.quartzInstanceId()).isNotEqualTo(nodeA.quartzInstanceId());
         cluster.registerKafkaDestination(nodeA, destinationId, "task14");
+        Instant firstFireAt = Instant.now().plusSeconds(12).truncatedTo(ChronoUnit.MILLIS);
 
         for (int index = 0; index < 100; index++) {
           UUID jobId = UUID.randomUUID();
@@ -36,6 +36,7 @@ class TwoNodeQuartzClusterIT {
           expectedExecutionIds.add(ExecutionIdentity.forScheduled(triggerId, fireAt));
         }
 
+        assertThat(Instant.now()).isBefore(firstFireAt);
         assertThat(cluster.awaitKafkaExecutionIds(consumer, nodeA, 100))
             .containsExactlyInAnyOrderElementsOf(expectedExecutionIds);
         assertThat(cluster.executionCount(nodeA)).isEqualTo(100);
