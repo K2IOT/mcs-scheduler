@@ -32,8 +32,7 @@ class TwoNodeQuartzClusterIT {
           UUID jobId = UUID.randomUUID();
           UUID triggerId = UUID.randomUUID();
           Instant fireAt = firstFireAt.plusMillis((index % 20) * 200L);
-          cluster.createOneShotSchedule(
-              nodeA, jobId, triggerId, destinationId, "task14", fireAt);
+          cluster.createOneShotSchedule(nodeA, jobId, triggerId, destinationId, "task14", fireAt);
           expectedExecutionIds.add(ExecutionIdentity.forScheduled(triggerId, fireAt));
         }
 
