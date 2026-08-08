@@ -115,16 +115,11 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
   }
 
   private CommandReceipt publishJobMutation(
-      String commandType,
-      UUID jobId,
-      String namespace,
-      long expectedRevision,
-      UUID requestId) {
+      String commandType, UUID jobId, String namespace, long expectedRevision, UUID requestId) {
     Objects.requireNonNull(jobId, "jobId");
     String normalizedNamespace = requireText(namespace, "namespace");
     long revision = positiveRevision(expectedRevision);
-    String payload =
-        "{\"jobId\":\"" + jobId + "\",\"expectedRevision\":" + revision + "}";
+    String payload = "{\"jobId\":\"" + jobId + "\",\"expectedRevision\":" + revision + "}";
     return publish(
         commandType,
         normalizedNamespace,
@@ -290,7 +285,9 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
 
   private String mapJson(Map<String, String> values) {
     return values.entrySet().stream()
-        .map(entry -> field(entry.getKey(), Objects.requireNonNull(entry.getValue(), "header value")))
+        .map(
+            entry ->
+                field(entry.getKey(), Objects.requireNonNull(entry.getValue(), "header value")))
         .collect(Collectors.joining(",", "{", "}"));
   }
 
