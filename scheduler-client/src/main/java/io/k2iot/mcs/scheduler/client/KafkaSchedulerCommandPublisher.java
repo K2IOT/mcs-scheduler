@@ -18,7 +18,8 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
   private final Supplier<UUID> requestIds;
   private final Supplier<UUID> messageIds;
   private final Clock clock;
-  private final JsonFormat.Printer jsonPrinter = JsonFormat.printer().omittingInsignificantWhitespace();
+  private final JsonFormat.Printer jsonPrinter =
+      JsonFormat.printer().omittingInsignificantWhitespace();
 
   public KafkaSchedulerCommandPublisher(
       KafkaTemplate<String, String> kafkaTemplate, String topic, String producer) {
@@ -48,7 +49,10 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
         "{\"job\":"
             + json(request.getJob())
             + ",\"triggers\":["
-            + request.getTriggersList().stream().map(this::json).reduce((a, b) -> a + "," + b).orElse("")
+            + request.getTriggersList().stream()
+                .map(this::json)
+                .reduce((a, b) -> a + "," + b)
+                .orElse("")
             + "]}";
     return publish(
         "CREATE_SCHEDULE",
