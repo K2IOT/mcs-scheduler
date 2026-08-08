@@ -55,7 +55,7 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
         namespace,
         request.getCaller().isBlank() ? producer : request.getCaller(),
         payload,
-        aggregateKey(namespace, request.getJob().getJobId(), requestId),
+        aggregateKey(namespace, request.getJob().getJobId()),
         requestId);
   }
 
@@ -165,12 +165,11 @@ public final class KafkaSchedulerCommandPublisher implements AsyncSchedulerClien
     }
   }
 
-  private String aggregateKey(String namespace, String aggregateId, UUID requestId) {
+  private String aggregateKey(String namespace, String aggregateId) {
     if (aggregateId != null && !aggregateId.isBlank()) {
       return namespace + ":" + aggregateId;
     }
-    UUID effective = requestId != null ? requestId : Objects.requireNonNull(requestIds.get(), "requestId");
-    return namespace + ":" + effective;
+    return namespace + ":schedule";
   }
 
   private static String escape(String value) {
