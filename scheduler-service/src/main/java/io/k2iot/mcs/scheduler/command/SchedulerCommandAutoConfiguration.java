@@ -64,7 +64,8 @@ public class SchedulerCommandAutoConfiguration {
     TriggerRepository.class,
     DestinationRepository.class,
     CommandRequestRepository.class,
-    SchedulerProjectionPort.class
+    SchedulerProjectionPort.class,
+    AuditRepository.class
   })
   SchedulerCommandFacade schedulerCommandFacade(
       JobRepository jobRepository,
@@ -73,14 +74,16 @@ public class SchedulerCommandAutoConfiguration {
       CommandRequestRepository commandRequestRepository,
       SchedulerProjectionPort schedulerProjection,
       JsonMapper jsonMapper,
-      Clock clock) {
-    return new SchedulerCommandFacade(
+      Clock clock,
+      AuditRepository auditRepository) {
+    return new LifecycleSchedulerCommandFacade(
         jobRepository,
         triggerRepository,
         destinationRepository,
         commandRequestRepository,
         schedulerProjection,
         jsonMapper,
-        clock);
+        clock,
+        auditRepository);
   }
 }

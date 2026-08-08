@@ -2,9 +2,9 @@ package io.k2iot.mcs.scheduler.grpc;
 
 import io.k2iot.mcs.scheduler.command.SchedulerCommandAutoConfiguration;
 import io.k2iot.mcs.scheduler.command.SchedulerCommandFacade;
-import io.k2iot.mcs.scheduler.job.JobRepository;
+import io.k2iot.mcs.scheduler.job.JobQueryService;
 import io.k2iot.mcs.scheduler.persistence.SchedulerJdbcPersistenceAutoConfiguration;
-import io.k2iot.mcs.scheduler.trigger.TriggerRepository;
+import io.k2iot.mcs.scheduler.trigger.TriggerQueryService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -26,13 +26,13 @@ public class SchedulerGrpcAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnBean({JobRepository.class, TriggerRepository.class})
+  @ConditionalOnBean({JobQueryService.class, TriggerQueryService.class})
   @ConditionalOnMissingBean(SchedulerQueryGrpcService.class)
   SchedulerQueryGrpcService schedulerQueryGrpcService(
-      JobRepository jobRepository,
-      TriggerRepository triggerRepository,
+      JobQueryService jobQueryService,
+      TriggerQueryService triggerQueryService,
       GrpcCommandMapper mapper,
       GrpcErrorMapper errorMapper) {
-    return new SchedulerQueryGrpcService(jobRepository, triggerRepository, mapper, errorMapper);
+    return new SchedulerQueryGrpcService(jobQueryService, triggerQueryService, mapper, errorMapper);
   }
 }
