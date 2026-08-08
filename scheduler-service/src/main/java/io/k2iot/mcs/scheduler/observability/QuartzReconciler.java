@@ -15,7 +15,7 @@ import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.springframework.transaction.annotation.Transactional;
 
-public final class QuartzReconciler {
+public class QuartzReconciler {
 
   private final Scheduler scheduler;
   private final JobRepository jobRepository;
