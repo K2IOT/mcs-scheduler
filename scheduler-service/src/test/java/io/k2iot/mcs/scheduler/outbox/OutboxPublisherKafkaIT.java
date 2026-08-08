@@ -36,6 +36,7 @@ import tools.jackson.databind.json.JsonMapper;
     properties = {
       "spring.autoconfigure.exclude=org.springframework.boot.quartz.autoconfigure.QuartzAutoConfiguration",
       "spring.flyway.enabled=true",
+      "spring.grpc.server.port=0",
       "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
       "spring.kafka.consumer.auto-offset-reset=earliest",
       "mcs.scheduler.instance-id=task-11-it",

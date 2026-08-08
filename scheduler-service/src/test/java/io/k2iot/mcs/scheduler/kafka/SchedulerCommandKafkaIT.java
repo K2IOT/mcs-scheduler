@@ -48,6 +48,7 @@ import tools.jackson.databind.json.JsonMapper;
     classes = SchedulerApplication.class,
     properties = {
       "spring.flyway.enabled=true",
+      "spring.grpc.server.port=0",
       "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
       "spring.kafka.consumer.auto-offset-reset=earliest",
       "spring.kafka.consumer.enable-auto-commit=false",
