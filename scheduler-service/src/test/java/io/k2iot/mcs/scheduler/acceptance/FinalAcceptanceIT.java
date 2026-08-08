@@ -176,10 +176,7 @@ class FinalAcceptanceIT {
     var query = SchedulerQueryServiceGrpc.newBlockingStub(channel);
     JobResponse grpcJob =
         query.getJob(
-            GetJobRequest.newBuilder()
-                .setNamespace(NAMESPACE)
-                .setJobId(jobId.toString())
-                .build());
+            GetJobRequest.newBuilder().setNamespace(NAMESPACE).setJobId(jobId.toString()).build());
     var grpcTriggers =
         query.listJobTriggers(
             ListJobTriggersRequest.newBuilder()
@@ -207,7 +204,8 @@ class FinalAcceptanceIT {
     assertThat(conflict.body()).contains("IDEMPOTENCY_CONFLICT").doesNotContain(SECRET_MARKER);
 
     UUID expectedExecutionId =
-        io.k2iot.mcs.scheduler.execution.ExecutionIdentity.forScheduled(firstTriggerId, firstFireAt);
+        io.k2iot.mcs.scheduler.execution.ExecutionIdentity.forScheduled(
+            firstTriggerId, firstFireAt);
     List<UUID> observed = new ArrayList<>();
     await("REST-created schedule publishes its execution event")
         .pollInSameThread()
@@ -226,7 +224,8 @@ class FinalAcceptanceIT {
         .untilAsserted(
             () -> {
               drainExecutionIds(restEvents, observed);
-              assertThat(observed.stream().filter(expectedExecutionId::equals).count()).isEqualTo(1);
+              assertThat(observed.stream().filter(expectedExecutionId::equals).count())
+                  .isEqualTo(1);
             });
   }
 
@@ -235,7 +234,8 @@ class FinalAcceptanceIT {
     UUID requestId = UUID.randomUUID();
     UUID jobId = UUID.randomUUID();
     var command = SchedulerCommandServiceGrpc.newBlockingStub(channel);
-    CreateJobRequest request = grpcCreateJobRequest(requestId, jobId, destinationId, "grpc-job", "grpc");
+    CreateJobRequest request =
+        grpcCreateJobRequest(requestId, jobId, destinationId, "grpc-job", "grpc");
 
     JobResponse created = command.createJob(request);
     JobResponse replayed = command.createJob(request);
@@ -258,8 +258,7 @@ class FinalAcceptanceIT {
     Metadata trailers = conflict.getTrailers();
     assertThat(trailers).isNotNull();
     assertThat(
-            trailers.get(
-                Metadata.Key.of("scheduler-error-code", Metadata.ASCII_STRING_MARSHALLER)))
+            trailers.get(Metadata.Key.of("scheduler-error-code", Metadata.ASCII_STRING_MARSHALLER)))
         .isEqualTo("IDEMPOTENCY_CONFLICT");
   }
 
@@ -291,7 +290,9 @@ class FinalAcceptanceIT {
             () -> {
               drainCommandResults(commandResults, requestId, results);
               assertThat(results).hasSize(2);
-              assertThat(results).allSatisfy(result -> assertThat(result.path("status").asText()).isEqualTo("SUCCEEDED"));
+              assertThat(results)
+                  .allSatisfy(
+                      result -> assertThat(result.path("status").asText()).isEqualTo("SUCCEEDED"));
             });
 
     assertThat(jobCount(postgres, jobId)).isEqualTo(1);
@@ -311,16 +312,14 @@ class FinalAcceptanceIT {
             });
 
     String conflictingPayload =
-        kafkaSchedulePayload(
-            jobId, triggerId, destinationId, "kafka-job-" + SECRET_MARKER, fireAt);
+        kafkaSchedulePayload(jobId, triggerId, destinationId, "kafka-job-" + SECRET_MARKER, fireAt);
     sendKafkaCommand(producer, key, UUID.randomUUID(), requestId, conflictingPayload);
 
     await("Kafka request-id conflict reaches DLT with stable error code")
         .pollInSameThread()
         .pollInterval(Duration.ofMillis(250))
         .atMost(Duration.ofSeconds(20))
-        .untilAsserted(
-            () -> assertThat(readDltErrorCodes(dlt)).contains("IDEMPOTENCY_CONFLICT"));
+        .untilAsserted(() -> assertThat(readDltErrorCodes(dlt)).contains("IDEMPOTENCY_CONFLICT"));
     assertThat(jobCount(postgres, jobId)).isEqualTo(1);
   }
 
@@ -509,7 +508,8 @@ class FinalAcceptanceIT {
           }]
         }
         """
-        .formatted(jobId, NAMESPACE, name, destinationId, triggerId, jobId, NAMESPACE, fireAt, fireAt);
+        .formatted(
+            jobId, NAMESPACE, name, destinationId, triggerId, jobId, NAMESPACE, fireAt, fireAt);
   }
 
   private static void sendKafkaCommand(
@@ -532,7 +532,7 @@ class FinalAcceptanceIT {
           "payload":%s
         }
         """
-        .formatted(messageId, requestId, Instant.now(), NAMESPACE, payload);
+            .formatted(messageId, requestId, Instant.now(), NAMESPACE, payload);
     producer.send(new ProducerRecord<>(COMMAND_TOPIC, key, envelope)).get(10, TimeUnit.SECONDS);
   }
 
@@ -546,7 +546,8 @@ class FinalAcceptanceIT {
   private static Consumer<String, String> consumer(KafkaContainer kafka, String topic) {
     Properties properties = new Properties();
     properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
-    properties.put(ConsumerConfig.GROUP_ID_CONFIG, "final-acceptance-" + topic + "-" + UUID.randomUUID());
+    properties.put(
+        ConsumerConfig.GROUP_ID_CONFIG, "final-acceptance-" + topic + "-" + UUID.randomUUID());
     properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
     Consumer<String, String> consumer =
@@ -572,7 +573,8 @@ class FinalAcceptanceIT {
             });
   }
 
-  private static void drainExecutionIds(Consumer<String, String> consumer, List<UUID> executionIds) {
+  private static void drainExecutionIds(
+      Consumer<String, String> consumer, List<UUID> executionIds) {
     consumer
         .poll(Duration.ofMillis(250))
         .forEach(
@@ -649,10 +651,12 @@ class FinalAcceptanceIT {
   }
 
   private static int triggerCount(PostgreSQLContainer<?> postgres, UUID jobId) throws SQLException {
-    return count(postgres, "select count(*) from scheduler.trigger_definition where job_id = ?", jobId);
+    return count(
+        postgres, "select count(*) from scheduler.trigger_definition where job_id = ?", jobId);
   }
 
-  private static int count(PostgreSQLContainer<?> postgres, String sql, UUID id) throws SQLException {
+  private static int count(PostgreSQLContainer<?> postgres, String sql, UUID id)
+      throws SQLException {
     try (Connection connection = connection(postgres);
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setObject(1, id);
@@ -683,7 +687,8 @@ class FinalAcceptanceIT {
   private static Path serviceJar(Path repositoryRoot) throws IOException {
     Path target = repositoryRoot.resolve("scheduler-service/target");
     if (!Files.isDirectory(target)) {
-      throw new IllegalStateException("scheduler-service must be packaged before final acceptance IT runs");
+      throw new IllegalStateException(
+          "scheduler-service must be packaged before final acceptance IT runs");
     }
     try (var candidates = Files.list(target)) {
       return candidates
