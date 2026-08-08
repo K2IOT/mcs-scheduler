@@ -36,13 +36,7 @@ class KafkaSchedulerCommandPublisherTest {
         };
     var publisher = publisher(kafkaTemplate, requestIds, () -> messageId);
 
-    CommandReceipt receipt =
-        publisher.createSchedule(
-            CreateScheduleRequest.newBuilder()
-                .setNamespace("billing")
-                .setCaller("billing-service")
-                .build(),
-            null);
+    CommandReceipt receipt = publisher.createSchedule(validScheduleRequest(), null);
 
     assertThat(calls[0]).isEqualTo(1);
     assertThat(receipt.requestId()).isEqualTo(generatedRequestId);
@@ -102,6 +96,22 @@ class KafkaSchedulerCommandPublisherTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("cascade");
     verifyNoInteractions(kafkaTemplate);
+  }
+
+  private CreateScheduleRequest validScheduleRequest() {
+    return CreateScheduleRequest.newBuilder()
+        .setNamespace("billing")
+        .setCaller("billing-service")
+        .setJob(
+            JobDraft.newBuilder()
+                .setJobId("73000000-0000-4000-8000-000000000002")
+                .setName("invoice-sweep")
+                .setDestinationId("73000000-0000-4000-8000-000000000003")
+                .setDestinationVersion(1)
+                .setEventType("billing.invoice.sweep")
+                .setConcurrencyPolicy(ConcurrencyPolicy.CONCURRENCY_POLICY_ALLOW)
+                .setRecoveryPolicy(RecoveryPolicy.RECOVERY_POLICY_NONE))
+        .build();
   }
 
   private KafkaSchedulerCommandPublisher publisher(
