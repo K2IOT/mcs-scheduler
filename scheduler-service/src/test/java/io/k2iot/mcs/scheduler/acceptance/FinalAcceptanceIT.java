@@ -178,7 +178,10 @@ class FinalAcceptanceIT {
     assertThat(jobCount(postgres, jobId)).isEqualTo(1);
     assertThat(triggerCount(postgres, jobId)).isEqualTo(2);
 
-    var query = SchedulerQueryServiceGrpc.newBlockingStub(channel);
+    var query =
+        SchedulerQueryServiceGrpc.newBlockingStub(channel)
+            .withWaitForReady()
+            .withDeadlineAfter(15, TimeUnit.SECONDS);
     JobResponse grpcJob =
         query.getJob(
             GetJobRequest.newBuilder().setNamespace(NAMESPACE).setJobId(jobId.toString()).build());
@@ -238,7 +241,10 @@ class FinalAcceptanceIT {
       ManagedChannel channel, PostgreSQLContainer<?> postgres, UUID destinationId) {
     UUID requestId = UUID.randomUUID();
     UUID jobId = UUID.randomUUID();
-    var command = SchedulerCommandServiceGrpc.newBlockingStub(channel);
+    var command =
+        SchedulerCommandServiceGrpc.newBlockingStub(channel)
+            .withWaitForReady()
+            .withDeadlineAfter(15, TimeUnit.SECONDS);
     CreateJobRequest request =
         grpcCreateJobRequest(requestId, jobId, destinationId, "grpc-job", "grpc");
 
