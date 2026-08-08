@@ -8,13 +8,15 @@ import io.k2iot.mcs.scheduler.trigger.TriggerQueryService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.grpc.server.autoconfigure.GrpcServerAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(
     after = {
       SchedulerJdbcPersistenceAutoConfiguration.class,
       SchedulerCommandAutoConfiguration.class
-    })
+    },
+    before = GrpcServerAutoConfiguration.class)
 public class SchedulerGrpcAutoConfiguration {
 
   @Bean
