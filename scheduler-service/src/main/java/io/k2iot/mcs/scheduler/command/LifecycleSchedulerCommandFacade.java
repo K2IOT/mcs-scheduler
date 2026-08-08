@@ -14,7 +14,7 @@ import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-public final class LifecycleSchedulerCommandFacade extends SchedulerCommandFacade {
+public class LifecycleSchedulerCommandFacade extends SchedulerCommandFacade {
 
   private final JobRepository jobRepository;
   private final TriggerRepository triggerRepository;
