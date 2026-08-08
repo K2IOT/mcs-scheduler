@@ -14,6 +14,5 @@ public interface AsyncSchedulerClient {
   CommandReceipt deleteJob(
       UUID jobId, String namespace, long expectedRevision, boolean cascade, UUID requestId);
 
-  CommandReceipt fireTrigger(
-      UUID triggerId, String namespace, UUID manualFireId, UUID requestId);
+  CommandReceipt fireTrigger(UUID triggerId, String namespace, UUID manualFireId, UUID requestId);
 }
