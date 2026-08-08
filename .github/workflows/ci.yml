@@ -59,6 +59,7 @@ jobs:
       - name: Run PostgreSQL and Kafka integration tests
         run: >-
           ./mvnw $MAVEN_ARGS -pl scheduler-service -am
+          -Dfailsafe.failIfNoSpecifiedTests=false
           -Dit.test='*IT,!RestartPersistenceIT,!TwoNodeQuartzClusterIT,!ProcessKillRecoveryIT'
           verify
       - name: Upload integration diagnostics
@@ -88,6 +89,7 @@ jobs:
         run: |
           for i in 1 2 3; do
             ./mvnw $MAVEN_ARGS -pl scheduler-service -am \
+              -Dfailsafe.failIfNoSpecifiedTests=false \
               -Dit.test=RestartPersistenceIT,TwoNodeQuartzClusterIT verify || exit 1
           done
       - name: Upload cluster diagnostics
@@ -115,6 +117,7 @@ jobs:
       - name: Run process-kill recovery drill
         run: >-
           ./mvnw $MAVEN_ARGS -pl scheduler-service -am
+          -Dfailsafe.failIfNoSpecifiedTests=false
           -Dit.test=ProcessKillRecoveryIT verify
       - name: Upload process-kill diagnostics
         if: failure()
