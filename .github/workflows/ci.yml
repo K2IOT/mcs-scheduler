@@ -139,6 +139,91 @@ jobs:
       - name: Validate Compose topology
         run: docker compose -f docker/compose.yml config
 
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start production-like two-node topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f docker/compose.yml up --build -d
+      - name: Verify both REST nodes are healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          for port in 8081 8082; do
+            healthy=false
+            for attempt in $(seq 1 60); do
+              if curl --fail --silent --show-error "http://127.0.0.1:${port}/actuator/health" >/dev/null; then
+                healthy=true
+                break
+              fi
+              sleep 2
+            done
+            if [[ "$healthy" != true ]]; then
+              echo "Scheduler REST node on port ${port} did not become healthy"
+              exit 1
+            fi
+          done
+      - name: Verify two Quartz scheduler instances share the database
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          for attempt in $(seq 1 30); do
+            count="$(docker compose -f docker/compose.yml exec -T postgres \
+              psql -U scheduler -d scheduler -Atc \
+              'select count(*) from quartz.qrtz_scheduler_state;')"
+            if [[ "$count" == "2" ]]; then
+              break
+            fi
+            sleep 2
+          done
+          echo "Quartz scheduler_state rows=${count}"
+          test "$count" = "2"
+      - name: Probe gRPC transport with grpcurl
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(docker run --rm --network host \
+            -v "$PWD:/work" \
+            fullstorydev/grpcurl:v1.9.3 \
+            -plaintext \
+            -import-path /work/scheduler-contracts/src/main/proto \
+            -proto mcs/scheduler/v1/scheduler_query.proto \
+            -d '{"namespace":"diagnostic","jobId":"00000000-0000-0000-0000-000000000001"}' \
+            127.0.0.1:9091 \
+            mcs.scheduler.v1.SchedulerQueryService/GetJob 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output" | tee grpc-transport.txt
+          if printf '%s\n' "$output" | grep -qiE 'NotFound|NOT_FOUND|JOB_NOT_FOUND'; then
+            exit 0
+          fi
+          exit "$status"
+      - name: Capture Compose diagnostics
+        if: always()
+        shell: bash
+        run: |
+          docker compose -f docker/compose.yml ps > compose-ps.txt 2>&1 || true
+          docker compose -f docker/compose.yml logs --no-color > compose-smoke.log 2>&1 || true
+      - name: Tear down topology
+        if: always()
+        run: docker compose -f docker/compose.yml down -v --remove-orphans
+      - name: Upload Compose diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-smoke-diagnostics
+          path: |
+            compose-ps.txt
+            compose-smoke.log
+            grpc-transport.txt
+          if-no-files-found: warn
+
   validate:
     if: always()
     needs:
