@@ -73,6 +73,7 @@ class FinalAcceptanceIT {
   private static final String COMMAND_RESULT_TOPIC = "mcs.scheduler.final.command-results";
   private static final String DLT_TOPIC = "mcs.scheduler.final.commands.DLT";
   private static final String REST_EVENT_TOPIC = "mcs.scheduler.final.rest-events";
+  private static final String GRPC_EVENT_TOPIC = "mcs.scheduler.final.grpc-events";
   private static final String KAFKA_EVENT_TOPIC = "mcs.scheduler.final.kafka-events";
   private static final String SECRET_MARKER = "final-acceptance-secret-must-not-leak";
   private static final JsonMapper JSON = JsonMapper.builder().findAndAddModules().build();
@@ -111,6 +112,7 @@ class FinalAcceptanceIT {
       createTopic(kafka, COMMAND_RESULT_TOPIC);
       createTopic(kafka, DLT_TOPIC);
       createTopic(kafka, REST_EVENT_TOPIC);
+      createTopic(kafka, GRPC_EVENT_TOPIC);
       createTopic(kafka, KAFKA_EVENT_TOPIC);
       node.start();
 
@@ -118,7 +120,7 @@ class FinalAcceptanceIT {
       UUID grpcDestinationId = UUID.randomUUID();
       UUID kafkaDestinationId = UUID.randomUUID();
       registerDestination(postgres, restDestinationId, REST_EVENT_TOPIC);
-      registerDestination(postgres, grpcDestinationId, REST_EVENT_TOPIC);
+      registerDestination(postgres, grpcDestinationId, GRPC_EVENT_TOPIC);
       registerDestination(postgres, kafkaDestinationId, KAFKA_EVENT_TOPIC);
 
       ManagedChannel channel =
