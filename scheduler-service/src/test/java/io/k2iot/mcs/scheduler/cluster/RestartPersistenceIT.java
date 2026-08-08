@@ -19,13 +19,15 @@ class RestartPersistenceIT {
       UUID destinationId = UUID.randomUUID();
       UUID jobId = UUID.randomUUID();
       UUID triggerId = UUID.randomUUID();
-      Instant fireAt = Instant.now().plusSeconds(6).truncatedTo(ChronoUnit.MILLIS);
 
       String nodeAQuartzInstanceId;
+      Instant fireAt;
       try (var nodeA = cluster.startNode("restart-a")) {
         nodeAQuartzInstanceId = nodeA.quartzInstanceId();
         cluster.registerKafkaDestination(nodeA, destinationId, "task14");
+        fireAt = Instant.now().plusSeconds(10).truncatedTo(ChronoUnit.MILLIS);
         cluster.createOneShotSchedule(nodeA, jobId, triggerId, destinationId, "task14", fireAt);
+        assertThat(Instant.now()).isBefore(fireAt);
       }
 
       try (var consumer = cluster.newExecutionConsumer();
@@ -35,6 +37,7 @@ class RestartPersistenceIT {
         UUID expectedExecutionId = ExecutionIdentity.forScheduled(triggerId, fireAt);
         assertThat(cluster.awaitKafkaExecutionIds(consumer, nodeB, 1))
             .containsExactly(expectedExecutionId);
+        assertThat(Instant.now()).isAfterOrEqualTo(fireAt);
         assertThat(cluster.executionCount(nodeB)).isEqualTo(1);
         assertThat(cluster.executionCount(nodeB, expectedExecutionId)).isEqualTo(1);
       }
