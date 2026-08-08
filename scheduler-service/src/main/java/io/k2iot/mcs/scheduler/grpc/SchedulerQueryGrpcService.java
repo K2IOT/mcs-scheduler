@@ -44,8 +44,7 @@ public final class SchedulerQueryGrpcService
       GrpcCommandMapper mapper,
       GrpcErrorMapper errorMapper) {
     this.jobQueryService = Objects.requireNonNull(jobQueryService, "jobQueryService");
-    this.triggerQueryService =
-        Objects.requireNonNull(triggerQueryService, "triggerQueryService");
+    this.triggerQueryService = Objects.requireNonNull(triggerQueryService, "triggerQueryService");
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.errorMapper = Objects.requireNonNull(errorMapper, "errorMapper");
   }
@@ -87,8 +86,7 @@ public final class SchedulerQueryGrpcService
         responseObserver,
         () -> {
           UUID triggerId = mapper.uuid(request.getTriggerId(), "trigger_id");
-          TriggerDefinition trigger =
-              triggerQueryService.get(triggerId, request.getNamespace());
+          TriggerDefinition trigger = triggerQueryService.get(triggerId, request.getNamespace());
           return mapper.triggerResponse(trigger);
         });
   }
