@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import io.k2iot.mcs.scheduler.SchedulerApplication;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -18,6 +19,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -43,11 +48,13 @@ import tools.jackson.databind.json.JsonMapper;
       "mcs.scheduler.outbox.enabled=false"
     })
 @EmbeddedKafka(partitions = 1, topics = OutboxPublisherKafkaIT.EVENT_TOPIC)
+@Import(OutboxPublisherKafkaIT.FixedClockConfiguration.class)
 class OutboxPublisherKafkaIT {
 
   static final String EVENT_TOPIC = "billing.scheduler.executions.test.v1";
 
   private static final Instant NOW = Instant.parse("2026-08-07T13:00:00Z");
+  private static final Instant PUBLISH_NOW = NOW.plusSeconds(30);
   private static final UUID DESTINATION_ID =
       UUID.fromString("81000000-0000-4000-8000-000000000001");
   private static final UUID JOB_ID = UUID.fromString("82000000-0000-4000-8000-000000000001");
@@ -267,5 +274,15 @@ class OutboxPublisherKafkaIT {
     jdbc.update("delete from scheduler.trigger_definition");
     jdbc.update("delete from scheduler.job_definition");
     jdbc.update("delete from scheduler.destination");
+  }
+
+  @TestConfiguration(proxyBeanMethods = false)
+  static class FixedClockConfiguration {
+
+    @Bean
+    @Primary
+    Clock outboxTestClock() {
+      return Clock.fixed(PUBLISH_NOW, ZoneOffset.UTC);
+    }
   }
 }
