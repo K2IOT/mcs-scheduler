@@ -18,7 +18,8 @@ class GrpcAutoConfigurationIT extends PostgresIntegrationTestBase {
 
   @Test
   void registersBindableSchedulerServiceAndStartsGrpcServer() {
-    Map<String, BindableService> services = applicationContext.getBeansOfType(BindableService.class);
+    Map<String, BindableService> services =
+        applicationContext.getBeansOfType(BindableService.class);
     Map<String, GrpcServerLifecycle> lifecycles =
         applicationContext.getBeansOfType(GrpcServerLifecycle.class);
 
