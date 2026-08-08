@@ -1,0 +1,75 @@
+name: Diagnose gRPC Conditions
+
+on:
+  push:
+    branches:
+      - agent/final-acceptance-verification
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create diagnostics-only Compose override
+        shell: bash
+        run: |
+          cat > grpc-diagnostic.override.yml <<'YAML'
+          services:
+            scheduler-node-1:
+              environment:
+                MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,conditions
+            scheduler-node-2:
+              environment:
+                MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,conditions
+          YAML
+      - name: Start topology
+        run: docker compose -f docker/compose.yml -f grpc-diagnostic.override.yml up --build -d
+      - name: Wait for REST health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for port in 8081 8082; do
+            for attempt in $(seq 1 60); do
+              if curl --fail --silent "http://127.0.0.1:${port}/actuator/health" >/dev/null; then
+                break
+              fi
+              if [[ "$attempt" == 60 ]]; then exit 1; fi
+              sleep 2
+            done
+          done
+      - name: Capture condition evaluation report
+        shell: bash
+        run: |
+          curl --fail --silent http://127.0.0.1:8081/actuator/conditions > grpc-conditions.json
+          python3 - <<'PY'
+          import json
+          data = json.load(open('grpc-conditions.json'))
+          contexts = data.get('contexts', {})
+          for context_name, context in contexts.items():
+              print(f'CONTEXT {context_name}')
+              for bucket in ('positiveMatches', 'negativeMatches'):
+                  print(bucket)
+                  for name, entries in context.get(bucket, {}).items():
+                      if 'Grpc' in name or 'grpc' in name or 'SchedulerGrpc' in name:
+                          print(name)
+                          print(json.dumps(entries, indent=2))
+          PY
+      - name: Capture logs
+        if: always()
+        run: docker compose -f docker/compose.yml -f grpc-diagnostic.override.yml logs --no-color > grpc-condition-compose.log 2>&1 || true
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker/compose.yml -f grpc-diagnostic.override.yml down -v --remove-orphans
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grpc-condition-diagnostics
+          path: |
+            grpc-conditions.json
+            grpc-condition-compose.log
+          if-no-files-found: warn
