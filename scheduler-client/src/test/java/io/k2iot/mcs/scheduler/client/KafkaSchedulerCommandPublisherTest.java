@@ -34,8 +34,7 @@ class KafkaSchedulerCommandPublisherTest {
           calls[0]++;
           return generatedRequestId;
         };
-    var publisher =
-        publisher(kafkaTemplate, requestIds, () -> messageId);
+    var publisher = publisher(kafkaTemplate, requestIds, () -> messageId);
 
     CommandReceipt receipt =
         publisher.createSchedule(
