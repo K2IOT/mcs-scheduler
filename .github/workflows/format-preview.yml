@@ -24,4 +24,6 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw -B -ntp -pl scheduler-service spotless:apply
+          echo '--- BEGIN FORMATTED PROCESS KILL TEST ---'
           cat scheduler-service/src/test/java/io/k2iot/mcs/scheduler/cluster/ProcessKillRecoveryIT.java
+          echo '--- END FORMATTED PROCESS KILL TEST ---'
