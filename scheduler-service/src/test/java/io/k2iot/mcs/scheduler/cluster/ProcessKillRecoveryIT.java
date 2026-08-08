@@ -64,9 +64,7 @@ class ProcessKillRecoveryIT {
         repositoryRoot.resolve("scheduler-service/src/test/resources/cluster/Dockerfile.test");
     Path serviceJar = serviceJar(repositoryRoot);
 
-    assertThat(testDockerfile)
-        .as("Task 15 containerized recovery Dockerfile")
-        .isRegularFile();
+    assertThat(testDockerfile).as("Task 15 containerized recovery Dockerfile").isRegularFile();
     assertThat(serviceJar).as("packaged scheduler-service executable jar").isRegularFile();
 
     ImageFromDockerfile schedulerImage =
@@ -115,8 +113,7 @@ class ProcessKillRecoveryIT {
         String acquiredBy = awaitAcquiredNode(postgres);
         assertThat(acquiredBy).isIn("task15-node-a", "task15-node-b");
 
-        GenericContainer<?> acquiredNode =
-            acquiredBy.equals("task15-node-a") ? nodeA : nodeB;
+        GenericContainer<?> acquiredNode = acquiredBy.equals("task15-node-a") ? nodeA : nodeB;
         GenericContainer<?> survivingNode = acquiredNode == nodeA ? nodeB : nodeA;
         assertThat(survivingNode.isRunning()).isTrue();
 
@@ -196,11 +193,7 @@ class ProcessKillRecoveryIT {
   }
 
   private static void createRecoverySchedule(
-      GenericContainer<?> node,
-      UUID destinationId,
-      UUID jobId,
-      UUID triggerId,
-      Instant fireAt)
+      GenericContainer<?> node, UUID destinationId, UUID jobId, UUID triggerId, Instant fireAt)
       throws IOException, InterruptedException {
     String body =
         """
@@ -285,7 +278,8 @@ class ProcessKillRecoveryIT {
     return acquiredBy[0];
   }
 
-  private static Optional<String> acquiredNode(PostgreSQLContainer<?> postgres) throws SQLException {
+  private static Optional<String> acquiredNode(PostgreSQLContainer<?> postgres)
+      throws SQLException {
     try (Connection connection = connection(postgres);
         Statement statement = connection.createStatement();
         ResultSet result =
@@ -302,7 +296,8 @@ class ProcessKillRecoveryIT {
 
   private static void createAcquisitionMarkerTable(PostgreSQLContainer<?> postgres)
       throws SQLException {
-    try (Connection connection = connection(postgres); Statement statement = connection.createStatement()) {
+    try (Connection connection = connection(postgres);
+        Statement statement = connection.createStatement()) {
       statement.execute(
           """
           create table if not exists scheduler.process_kill_acquired_marker (
@@ -351,8 +346,8 @@ class ProcessKillRecoveryIT {
     }
   }
 
-  private static boolean executionRecoveryFlag(
-      PostgreSQLContainer<?> postgres, UUID executionId) throws SQLException {
+  private static boolean executionRecoveryFlag(PostgreSQLContainer<?> postgres, UUID executionId)
+      throws SQLException {
     try (Connection connection = connection(postgres);
         PreparedStatement statement =
             connection.prepareStatement(
@@ -390,7 +385,8 @@ class ProcessKillRecoveryIT {
     try (Admin admin =
         Admin.create(
             Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers()))) {
-      admin.createTopics(List.of(new NewTopic(topic, 1, (short) 1)))
+      admin
+          .createTopics(List.of(new NewTopic(topic, 1, (short) 1)))
           .all()
           .get(10, TimeUnit.SECONDS);
     }
