@@ -30,7 +30,8 @@ class GrpcSchedulerClientTest {
 
     client.createSchedule(baseRequest(), SUPPLIED_REQUEST_ID);
 
-    ArgumentCaptor<CreateScheduleRequest> request = ArgumentCaptor.forClass(CreateScheduleRequest.class);
+    ArgumentCaptor<CreateScheduleRequest> request =
+        ArgumentCaptor.forClass(CreateScheduleRequest.class);
     verify(stub).createSchedule(request.capture());
     assertThat(request.getValue().getRequestId()).isEqualTo(SUPPLIED_REQUEST_ID.toString());
   }
@@ -49,7 +50,8 @@ class GrpcSchedulerClientTest {
 
     client.createSchedule(baseRequest(), null);
 
-    ArgumentCaptor<CreateScheduleRequest> request = ArgumentCaptor.forClass(CreateScheduleRequest.class);
+    ArgumentCaptor<CreateScheduleRequest> request =
+        ArgumentCaptor.forClass(CreateScheduleRequest.class);
     verify(stub).createSchedule(request.capture());
     assertThat(calls[0]).isEqualTo(1);
     assertThat(request.getValue().getRequestId()).isEqualTo(GENERATED_REQUEST_ID.toString());
