@@ -55,6 +55,7 @@ public final class ClusterTestApplication implements AutoCloseable {
           .withPassword("scheduler");
 
   private static final KafkaContainer KAFKA = new KafkaContainer("apache/kafka-native:3.8.0");
+  private static final DriverManagerDataSource DATA_SOURCE;
   private static final JdbcTemplate JDBC;
 
   static {
@@ -66,12 +67,12 @@ public final class ClusterTestApplication implements AutoCloseable {
         .load()
         .migrate();
 
-    var dataSource = new DriverManagerDataSource();
-    dataSource.setDriverClassName(POSTGRES.getDriverClassName());
-    dataSource.setUrl(POSTGRES.getJdbcUrl());
-    dataSource.setUsername(POSTGRES.getUsername());
-    dataSource.setPassword(POSTGRES.getPassword());
-    JDBC = new JdbcTemplate(dataSource);
+    DATA_SOURCE = new DriverManagerDataSource();
+    DATA_SOURCE.setDriverClassName(POSTGRES.getDriverClassName());
+    DATA_SOURCE.setUrl(POSTGRES.getJdbcUrl());
+    DATA_SOURCE.setUsername(POSTGRES.getUsername());
+    DATA_SOURCE.setPassword(POSTGRES.getPassword());
+    JDBC = new JdbcTemplate(DATA_SOURCE);
   }
 
   private final String eventTopic = "mcs.scheduler.task14.executions." + UUID.randomUUID();
@@ -115,6 +116,11 @@ public final class ClusterTestApplication implements AutoCloseable {
     String nodeId = nodeName + "-" + UUID.randomUUID();
     ConfigurableApplicationContext context =
         new SpringApplicationBuilder(SchedulerApplication.class)
+            .initializers(
+                applicationContext ->
+                    applicationContext
+                        .getBeanFactory()
+                        .registerSingleton("dataSource", DATA_SOURCE))
             .run(
                 "--spring.application.name=mcs-scheduler-" + nodeId,
                 "--spring.main.banner-mode=off",
@@ -175,12 +181,7 @@ public final class ClusterTestApplication implements AutoCloseable {
   }
 
   public void createOneShotSchedule(
-      Node node,
-      UUID jobId,
-      UUID triggerId,
-      UUID destinationId,
-      String namespace,
-      Instant fireAt) {
+      Node node, UUID jobId, UUID triggerId, UUID destinationId, String namespace, Instant fireAt) {
     var job =
         new SchedulerCommands.JobDraft(
             jobId,
@@ -253,8 +254,7 @@ public final class ClusterTestApplication implements AutoCloseable {
   }
 
   public int executionCount(Node node) {
-    return node.jdbc()
-        .queryForObject("select count(*) from scheduler.execution", Integer.class);
+    return node.jdbc().queryForObject("select count(*) from scheduler.execution", Integer.class);
   }
 
   public int executionCount(Node node, UUID executionId) {
@@ -291,11 +291,13 @@ public final class ClusterTestApplication implements AutoCloseable {
     try (Admin admin =
         Admin.create(
             Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers()))) {
-      admin.createTopics(List.of(new NewTopic(eventTopic, 3, (short) 1)))
+      admin
+          .createTopics(List.of(new NewTopic(eventTopic, 3, (short) 1)))
           .all()
           .get(10, TimeUnit.SECONDS);
     } catch (Exception exception) {
-      throw new IllegalStateException("Failed to create Kafka event topic " + eventTopic, exception);
+      throw new IllegalStateException(
+          "Failed to create Kafka event topic " + eventTopic, exception);
     }
   }
 
@@ -309,7 +311,8 @@ public final class ClusterTestApplication implements AutoCloseable {
 
   @Override
   public void close() {
-    // Shared Testcontainers live for the test JVM; individual nodes and consumers own their lifecycle.
+    // Shared Testcontainers live for the test JVM; individual nodes and consumers own their
+    // lifecycle.
   }
 
   public record Node(ConfigurableApplicationContext context, String quartzInstanceId)
