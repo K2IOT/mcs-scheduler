@@ -68,7 +68,8 @@ class SchedulerQueryGrpcServiceTest {
   void readsJobAndTriggerQueriesFromExistingRepositories() {
     when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job()));
     when(triggerRepository.findById(TRIGGER_ID)).thenReturn(Optional.of(trigger()));
-    when(triggerRepository.findByJobId(JOB_ID)).thenReturn(List.of(trigger()));
+    when(triggerRepository.findByJobIdPage(JOB_ID, null, null, 101))
+        .thenReturn(List.of(trigger()));
 
     var jobResponse =
         stub.getJob(
