@@ -68,6 +68,9 @@ public final class GrpcSchedulerClient implements SchedulerClient {
   @Override
   public void deleteJob(
       UUID jobId, String namespace, long expectedRevision, boolean cascade, UUID requestId) {
+    if (cascade) {
+      throw new IllegalArgumentException("cascade job deletion is not supported in scheduler V1");
+    }
     UUID effectiveRequestId = requestId(requestId);
     DeleteJobRequest request =
         DeleteJobRequest.newBuilder()
@@ -76,7 +79,7 @@ public final class GrpcSchedulerClient implements SchedulerClient {
             .setCaller(caller)
             .setJobId(Objects.requireNonNull(jobId, "jobId").toString())
             .setExpectedRevision(positiveRevision(expectedRevision))
-            .setCascade(cascade)
+            .setCascade(false)
             .build();
     stub().deleteJob(request);
   }
