@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'agent/**'
+      - 'feature/**'
   workflow_dispatch:
 
 permissions:
@@ -15,173 +16,151 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  MAVEN_ARGS: -B -ntp
+
 jobs:
-  test:
+  format-and-unit:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-
       - name: Enable Maven wrapper
         run: chmod +x mvnw
-
-      - name: Run fast unit and architecture tests
-        shell: bash
-        run: |
-          set -o pipefail
-          ./mvnw -B -ntp test 2>&1 | tee test.log
-
-      - name: Upload test diagnostics
+      - name: Check formatting and run unit tests
+        run: ./mvnw $MAVEN_ARGS -DskipITs spotless:check verify
+      - name: Upload unit and coverage diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-diagnostics
+          name: format-unit-diagnostics
           path: |
             **/target/surefire-reports/**
-            test.log
+            **/target/site/jacoco/**
           if-no-files-found: warn
 
-  quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Enable Maven wrapper
-        run: chmod +x mvnw
-
-      - name: Check Java formatting
-        shell: bash
-        run: |
-          set -o pipefail
-          ./mvnw -B -ntp spotless:check 2>&1 | tee spotless.log
-
-      - name: Upload quality diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-diagnostics
-          path: spotless.log
-          if-no-files-found: warn
-
-  integration:
-    needs: test
+  postgres-kafka-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-
       - name: Enable Maven wrapper
         run: chmod +x mvnw
-
-      - name: Run full verification and integration tests
-        shell: bash
-        run: |
-          set -o pipefail
-          ./mvnw -B -ntp verify 2>&1 | tee integration-test.log
-
-      - name: Summarize integration failures
-        if: failure()
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-
-          output = []
-          reports = sorted(Path('.').glob('**/target/*-reports/TEST-*.xml'))
-          for report in reports:
-              try:
-                  root = ET.parse(report).getroot()
-              except (ET.ParseError, OSError) as exception:
-                  output.append(f'UNREADABLE {report}: {exception}')
-                  continue
-              for testcase in root.findall('testcase'):
-                  problem = testcase.find('failure')
-                  if problem is None:
-                      problem = testcase.find('error')
-                  if problem is None:
-                      continue
-                  class_name = testcase.get('classname', root.get('name', 'unknown'))
-                  test_name = testcase.get('name', 'unknown')
-                  message = (problem.get('message') or '').strip()
-                  detail = (problem.text or '').strip()
-                  output.append(f'FAILED {class_name}#{test_name}')
-                  if message:
-                      output.append(message)
-                  if detail:
-                      output.extend(detail.splitlines()[:160])
-                  output.append('')
-
-          if not output:
-              output.append('No XML failure/error entries found. Tail of Maven log follows:')
-              log = Path('integration-test.log')
-              if log.exists():
-                  output.extend(log.read_text(errors='replace').splitlines()[-200:])
-
-          summary = '\n'.join(output).rstrip() + '\n'
-          Path('integration-failure-summary.txt').write_text(summary)
-          print(summary)
-          PY
-
+      - name: Run PostgreSQL and Kafka integration tests
+        run: >-
+          ./mvnw $MAVEN_ARGS -pl scheduler-service -am
+          -Dit.test='*IT,!RestartPersistenceIT,!TwoNodeQuartzClusterIT,!ProcessKillRecoveryIT'
+          verify
       - name: Upload integration diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-diagnostics
+          name: postgres-kafka-integration-diagnostics
           path: |
             **/target/surefire-reports/**
             **/target/failsafe-reports/**
-            integration-test.log
-            integration-failure-summary.txt
           if-no-files-found: warn
+
+  quartz-two-node-cluster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Enable Maven wrapper
+        run: chmod +x mvnw
+      - name: Run two-node cluster tests three times
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            ./mvnw $MAVEN_ARGS -pl scheduler-service -am \
+              -Dit.test=RestartPersistenceIT,TwoNodeQuartzClusterIT verify || exit 1
+          done
+      - name: Upload cluster diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quartz-cluster-diagnostics
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+          if-no-files-found: warn
+
+  process-kill-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Enable Maven wrapper
+        run: chmod +x mvnw
+      - name: Run process-kill recovery drill
+        run: >-
+          ./mvnw $MAVEN_ARGS -pl scheduler-service -am
+          -Dit.test=ProcessKillRecoveryIT verify
+      - name: Upload process-kill diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: process-kill-recovery-diagnostics
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+          if-no-files-found: warn
+
+  package-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t mcs-scheduler:${{ github.sha }} .
+      - name: Validate Compose topology
+        run: docker compose -f docker/compose.yml config
 
   validate:
     if: always()
     needs:
-      - test
-      - quality
-      - integration
+      - format-and-unit
+      - postgres-kafka-integration
+      - quartz-two-node-cluster
+      - process-kill-recovery
+      - package-image
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Verify required CI gates
         shell: bash
         env:
-          TEST_RESULT: ${{ needs.test.result }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          FORMAT_UNIT: ${{ needs.format-and-unit.result }}
+          INTEGRATION: ${{ needs.postgres-kafka-integration.result }}
+          CLUSTER: ${{ needs.quartz-two-node-cluster.result }}
+          PROCESS_KILL: ${{ needs.process-kill-recovery.result }}
+          IMAGE: ${{ needs.package-image.result }}
         run: |
-          printf 'test=%s\nquality=%s\nintegration=%s\n' \
-            "$TEST_RESULT" "$QUALITY_RESULT" "$INTEGRATION_RESULT"
-
-          if [[ "$TEST_RESULT" != "success" || \
-                "$QUALITY_RESULT" != "success" || \
-                "$INTEGRATION_RESULT" != "success" ]]; then
-            echo 'One or more required CI gates did not succeed.'
-            exit 1
-          fi
+          printf 'format-and-unit=%s\nintegration=%s\ncluster=%s\nprocess-kill=%s\nimage=%s\n' \
+            "$FORMAT_UNIT" "$INTEGRATION" "$CLUSTER" "$PROCESS_KILL" "$IMAGE"
+          for result in "$FORMAT_UNIT" "$INTEGRATION" "$CLUSTER" "$PROCESS_KILL" "$IMAGE"; do
+            if [[ "$result" != "success" ]]; then
+              echo 'One or more required CI gates did not succeed.'
+              exit 1
+            fi
+          done
