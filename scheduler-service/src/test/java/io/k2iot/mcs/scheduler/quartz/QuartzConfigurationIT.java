@@ -57,6 +57,7 @@ class QuartzConfigurationIT {
 
   @Autowired private Scheduler scheduler;
   @Autowired private SchedulerProjectionPort projection;
+
   @Autowired(required = false)
   private QuartzReconciler reconciler;
 
