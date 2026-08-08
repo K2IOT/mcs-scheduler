@@ -17,7 +17,8 @@ final class ProcessKillRecoveryHook {
   private final JdbcTemplate jdbc;
   private final String instanceId;
 
-  ProcessKillRecoveryHook(JdbcTemplate jdbc, @Value("${mcs.scheduler.instance-id}") String instanceId) {
+  ProcessKillRecoveryHook(
+      JdbcTemplate jdbc, @Value("${mcs.scheduler.instance-id}") String instanceId) {
     this.jdbc = jdbc;
     this.instanceId = instanceId;
   }
@@ -47,7 +48,8 @@ final class ProcessKillRecoveryHook {
       new CountDownLatch(1).await();
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new IllegalStateException("Process-kill recovery hook interrupted before node kill", exception);
+      throw new IllegalStateException(
+          "Process-kill recovery hook interrupted before node kill", exception);
     }
   }
 }
