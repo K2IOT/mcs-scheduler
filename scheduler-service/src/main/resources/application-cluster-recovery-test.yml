@@ -1,0 +1,14 @@
+spring:
+  quartz:
+    properties:
+      org.quartz.scheduler.instanceName: mcs-scheduler-task15-recovery
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 2000
+      org.quartz.jobStore.misfireThreshold: 3000
+      org.quartz.threadPool.threadCount: 4
+
+mcs:
+  scheduler:
+    test:
+      recovery-hook-enabled: ${MCS_SCHEDULER_TEST_RECOVERY_HOOK_ENABLED:false}
