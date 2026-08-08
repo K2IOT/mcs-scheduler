@@ -121,11 +121,11 @@ class FinalAcceptanceIT {
       registerDestination(postgres, grpcDestinationId, REST_EVENT_TOPIC);
       registerDestination(postgres, kafkaDestinationId, KAFKA_EVENT_TOPIC);
 
-      try (ManagedChannel channel =
-              ManagedChannelBuilder.forAddress(node.getHost(), node.getMappedPort(9090))
-                  .usePlaintext()
-                  .build();
-          Consumer<String, String> restEvents = consumer(kafka, REST_EVENT_TOPIC);
+      ManagedChannel channel =
+          ManagedChannelBuilder.forAddress(node.getHost(), node.getMappedPort(9090))
+              .usePlaintext()
+              .build();
+      try (Consumer<String, String> restEvents = consumer(kafka, REST_EVENT_TOPIC);
           Consumer<String, String> commandResults = consumer(kafka, COMMAND_RESULT_TOPIC);
           Consumer<String, String> kafkaEvents = consumer(kafka, KAFKA_EVENT_TOPIC);
           Consumer<String, String> dlt = consumer(kafka, DLT_TOPIC);
@@ -135,6 +135,9 @@ class FinalAcceptanceIT {
         verifyGrpcReplayAndConflict(channel, postgres, grpcDestinationId);
         verifyKafkaCreationReplayConflictAndExecution(
             kafka, producer, commandResults, kafkaEvents, dlt, postgres, kafkaDestinationId);
+      } finally {
+        channel.shutdownNow();
+        assertThat(channel.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
       }
 
       assertThat(node.getLogs()).doesNotContain(SECRET_MARKER);
